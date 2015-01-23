@@ -2,11 +2,11 @@
 a python webservice for making sure events happen
 
 ## Why another one of these? ##
-This isnt' "monitoring" per se, nor "testing".  This is kind of for
-business-logic level assertions.  For example "I want to make sure that model
-xyz seems to be under control" is something that you want to verify every 3
-days.  You can either have a person click a button to verify it, or you might
-have a script that calls Affirmative's API.  
+This isn't monitoring per se, nor testing.  This is kind of a "daily
+checklist for technology operations".  For example "make sure that model xyz
+seems to be under control" is something that you want to verify every 3 days.
+You can either have a person click a button to verify it, or you might have a
+script that runs complicated checks and then calls Affirmative's API.  
 
 This is monitoring in a way, but you can't ask it the same question at any time
 and expect a reasonable answer to come back, like you often can when you are

@@ -1,7 +1,7 @@
 # affirmative
 a python webservice for making sure events happen
 
-## Why another one of these? ##
+## What it does ##
 This isn't monitoring per se, nor testing.  This is kind of a "daily
 checklist for technology operations".  For example "make sure that model xyz
 seems to be under control" is something that you want to verify every 3 days.

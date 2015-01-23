@@ -1,0 +1,83 @@
+
+<!doctype html>
+<title>View Events</title>
+<script type="text/javascript" src="//cdn.jsdelivr.net/underscorejs/1.4.3/underscore-min.js"></script>
+<script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.0.3/jquery-2.0.3.min.js"></script>
+<link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0-rc1/css/bootstrap.min.css" rel="stylesheet">
+<style type='text/css'>
+    .event-wrapper{
+        padding: 10px;
+    }
+    .time-wrapper, .data-wrapper{
+        margin-right: 10px;
+    }
+    .event-container{
+        border: 2px solid black;
+        width: 300px;
+        float: left;
+        margin: 10px;
+    }
+    input{
+        width: 200px;
+    }
+</style>
+
+<script type="text/javascript">
+
+    // Global container
+    affirmative_ui = {};
+
+    $(document).ready(function(){
+
+        var get_event_config = function(){
+            $.ajax({
+                url: "/affirmative/get_event_config",
+                data: {},
+                success: function(data){ render_event_config(JSON.parse(data)); },
+                error: function(){ alert("something went wrong."); }
+            });
+        }
+
+        var render_event_config = function(event_config){
+            for(var i = 0; i < event_config.length; i++){
+                this_config = event_config[i];
+                var config_text = this_config.name + " (key " + this_config.key + "): " 
+                    + this_config.num_required
+                    + " required and cleared every " + this_config.clear_every_hours + " hours";
+                var config_elem = $("<div></div>").text(config_text);
+                config_elem.appendTo("#config-rows");
+            }
+        }
+
+        $("#new-event-button").click(function(){
+            var name = $("#new-event-name").val();
+            var num_required = $("#new-event-num-required").val();
+            var clear_every_hours = $("#new-event-clear-every-hours").val();
+            $.ajax({
+                url: "/affirmative/register_new_event",
+                type: "POST",
+                data: {name: name, num_required: num_required, clear_every_hours: clear_every_hours},
+                success: function(){ location.reload(); },
+                error: function(){ alert("something went wrong."); }
+            });
+        });
+
+        get_event_config();
+
+    });
+
+</script>
+
+<div class='container'>
+    <h2>Manage Events</h2>
+    <div id='config-rows'></div>
+    <h3>Register an event</h3>
+    Name: <input id='new-event-name' /><br/>
+    Num Required: <input id='new-event-num-required' /><br/>
+    Clear every : <input id='new-event-clear-every-hours' /> hours <br/>
+    <button id='new-event-button'>Submit</button><br/><br/>
+    <form action="/affirmative/unregister_event" method="POST">
+        Delete event with name: <input id='event-name-to-delete' name='event-name-to-delete'/><br/>
+        <button id='new-event-button'>Submit</button>
+    </form>
+</div>

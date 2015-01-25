@@ -1,10 +1,15 @@
 
 <!doctype html>
-<title>View Events</title>
+<title>Manage Events</title>
 <script type="text/javascript" src="//cdn.jsdelivr.net/underscorejs/1.4.3/underscore-min.js"></script>
 <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.0.3/jquery-2.0.3.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.1/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.1/css/jquery.dataTables.min.css">
 <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0-rc1/css/bootstrap.min.css" rel="stylesheet">
 <style type='text/css'>
+    .nav-link{
+        font-size: 1.4em;
+    }
     .event-wrapper{
         padding: 10px;
     }
@@ -18,7 +23,13 @@
         margin: 10px;
     }
     input{
+        width: 70px;
+    }
+    #new-event-name{
         width: 200px;
+    }
+    #config-table{
+        margin-bottom: 20px;
     }
 </style>
 
@@ -39,24 +50,128 @@
         }
 
         var render_event_config = function(event_config){
-            for(var i = 0; i < event_config.length; i++){
-                this_config = event_config[i];
-                var config_text = this_config.name + " (key " + this_config.key + "): " 
-                    + this_config.num_required
-                    + " required and cleared every " + this_config.clear_every_hours + " hours";
-                var config_elem = $("<div></div>").text(config_text);
-                config_elem.appendTo("#config-rows");
+            $('#config-table').dataTable({
+                "destroy": true,
+                "data": event_config,
+                "columns": [
+                    { "data": "name"},
+                    { "data": "key"},
+                    { "data": "cron_minutes"},
+                    { "data": "cron_hours"},
+                    { "data": "cron_days_of_month"},
+                    { "data": "cron_months"},
+                    { "data": "cron_days_of_week"},
+                    { "data": "num_required"},
+                    { "data": "lookback_string"}
+                ],
+                "order": [[0, "asc"]],
+                "paging": false
+            });
+        }
+
+        var validate_fields = function(){
+            // This is just some light validation
+            // The python will do the real tricky stuff
+            var message = "";
+            var name = $("#new-event-name").val();
+            var name_regex = new RegExp("^[a-z_]+$");
+            if(!name_regex.test(name)){
+                message = "Name can only consist of lowercase letters and underscores.";
             }
+            $(".cron-input").each(function(){
+                var cron_val = $(this).val();
+                var numbers_and_commas_regex = new RegExp("^[0-9,]+$");
+                var dashes_and_numbers_regex = new RegExp("^[0-9-]+$");
+                var single_number_regex = new RegExp("^[0-9]+$");
+                var star_with_slash_regex = new RegExp("^\\*/[0-9]+$");
+
+                var passes_one = false;
+                if(cron_val == "*"){
+                    passes_one = true;
+                }
+                if(numbers_and_commas_regex.test(cron_val)){
+                    passes_one = true;
+                }
+                if(dashes_and_numbers_regex.test(cron_val)){
+                    passes_one = true;
+                }
+                if(single_number_regex.test(cron_val)){
+                    passes_one = true;
+                }
+                if(star_with_slash_regex.test(cron_val)){
+                    passes_one = true;
+                }
+
+                if(!passes_one){
+                    message = "One of more of the cron fields are badly formatted. See guide.";
+                }
+                    
+            });
+            return message;
         }
 
         $("#new-event-button").click(function(){
+            $(".validation-warning").remove();
+            var validation_message = validate_fields();
+            if(validation_message != ""){
+                $("<div class='alert alert-danger validation-warning'></div>")
+                    .text(validation_message)
+                    .insertAfter("#config-table").hide().show(300); 
+                return false;
+            }
             var name = $("#new-event-name").val();
             var num_required = $("#new-event-num-required").val();
-            var clear_every_hours = $("#new-event-clear-every-hours").val();
+            var lookback_string = $("#new-event-lookback-string").val();
+
+            var cron_minutes = $("#new-event-cron-minutes").val();
+            var cron_hours = $("#new-event-cron-hours").val();
+            var cron_months = $("#new-event-cron-months").val();
+            var cron_days_of_month = $("#new-event-cron-days-of-month").val();
+            var cron_days_of_week = $("#new-event-cron-days-of-week").val();
+
+            var data = {
+                name: name,
+                num_required: num_required,
+                lookback_string: lookback_string,
+                cron_minutes: cron_minutes,
+                cron_hours: cron_hours,
+                cron_months: cron_months,
+                cron_days_of_month: cron_days_of_month,
+                cron_days_of_week: cron_days_of_week
+            }
+
             $.ajax({
-                url: "/affirmative/register_new_event",
+                url: "/affirmative/register_or_update_event",
                 type: "POST",
-                data: {name: name, num_required: num_required, clear_every_hours: clear_every_hours},
+                data: data,
+                success: function(data){ 
+                    if(data != "yay"){ 
+                        render_new_or_update_error(data);
+                    }
+                    else{
+                        location.reload();
+                    }
+                },
+                error: function(data){ render_new_or_update_error(data); }
+            });
+        });
+
+        var render_new_or_update_error = function(message){
+            // Might be an object if it's a 500 error etc.
+            if(typeof message == "object"){
+                message = "Something went wrong!";
+            }
+            // Otherwise it's a message from the server.
+            $("<div class='alert alert-danger validation-warning'></div>")
+                .text(message).insertAfter("#config-table");
+        }
+
+        $("#delete-event-button").click(function(){
+            var name = $("#event-name-to-delete").val();
+            $.ajax({
+                url: "/affirmative/unregister_event",
+                type: "POST",
+                data: {name_to_delete: name},
                 success: function(){ location.reload(); },
                 error: function(){ alert("something went wrong."); }
             });
@@ -69,15 +184,39 @@
 </script>
 
 <div class='container'>
+    <a class='nav-link' href='view_events'>Dashboard</a></br/>
     <h2>Manage Events</h2>
-    <div id='config-rows'></div>
-    <h3>Register an event</h3>
-    Name: <input id='new-event-name' /><br/>
-    Num Required: <input id='new-event-num-required' /><br/>
-    Clear every : <input id='new-event-clear-every-hours' /> hours <br/>
+    <table id='config-table'>
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Key</th>
+            <th>Minutes</th>
+            <th>Hours</th>
+            <th>Day of Month</th>
+            <th>Months</th>
+            <th>Days of Week</th>
+            <th># Required</th>
+            <th>Lookback</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <h3>Register or update an event</h3>
+    Name: <input id='new-event-name' /><br/><br/>
+
+    Cron Minutes: <input class='cron-input' id='new-event-cron-minutes' /> (0-59)  <br/>
+    Cron Hours: <input class='cron-input' id='new-event-cron-hours' /> (0-59) <br/>
+    Cron Days of Month: <input class='cron-input' id='new-event-cron-days-of-month' /> (1-31) <br/>
+    Cron Months: <input class='cron-input' id='new-event-cron-months' /> (0-11) <br/>
+    Cron Days of Week: <input class='cron-input' id='new-event-cron-days-of-week' /> (0-6, 0 = Sunday) <br/><br/>
+
+    Num Required: <input id='new-event-num-required' /> (This is how many events you need to see from the check.)<br/>
+    Lookback String: <input id='new-event-lookback-string' /> (This says how far back in time we will look to count events.)<br/><br/>
+
     <button id='new-event-button'>Submit</button><br/><br/>
-    <form action="/affirmative/unregister_event" method="POST">
-        Delete event with name: <input id='event-name-to-delete' name='event-name-to-delete'/><br/>
-        <button id='new-event-button'>Submit</button>
-    </form>
+    <h3>Unregister an event</h3>
+    Delete event with name: <input id='event-name-to-delete' name='event-name-to-delete'/><br/>
+    <button id='delete-event-button'>Submit</button>
 </div>

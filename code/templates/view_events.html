@@ -1,0 +1,156 @@
+
+<!doctype html>
+<title>View Events</title>
+<script type="text/javascript" src="//cdn.jsdelivr.net/underscorejs/1.4.3/underscore-min.js"></script>
+<script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.0.3/jquery-2.0.3.min.js"></script>
+<link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0-rc1/css/bootstrap.min.css" rel="stylesheet">
+<script src="//code.jquery.com/ui/1.11.2/jquery-ui.js"></script>
+<link rel="stylesheet" href="//code.jquery.com/ui/1.11.2/themes/smoothness/jquery-ui.css">
+<style type='text/css'>
+    .nav-link{
+        font-size: 1.4em;
+    }
+    .event-wrapper{
+        padding: 10px;
+    }
+    .time-wrapper, .data-wrapper{
+        margin-right: 10px;
+    }
+    .event-container{
+        border: 2px solid black;
+        width: 300px;
+        float: left;
+        margin: 10px;
+    }
+    input{
+        width: 200px;
+    }
+    .event-name{
+        color: green;
+        margin-right: 5px;
+        font-size: 1.3em;
+    }
+    .dash-container{
+        margin-bottom: 20px;
+    }
+    .config-details{
+        margin-bottom: 10px;
+    }
+    .check-pass, .check-fail{
+        margin-right: 10px;
+        height: 25px;
+        width: 25px;
+    }
+</style>
+
+<script type="text/javascript">
+
+    // Global container
+    affirmative_ui = {};
+affirmative_ui.config_by_name = {};
+
+    $(document).ready(function(){
+
+        var get_config = function(){
+            $.ajax({
+                url: "/affirmative/get_event_config",
+                data: {},
+                async: false,
+                success: function(data){ 
+                    var config = JSON.parse(data);
+                    for(var i = 0; i < config.length; i++){
+                        var this_config = config[i];
+                        affirmative_ui.config_by_name[this_config.name] = this_config;
+                    }
+                },
+                error: function(){ alert("something went wrong."); }
+            });
+        }
+        var get_dash_data = function(){
+            $.ajax({
+                url: "/affirmative/get_check_history",
+                data: {},
+                success: function(data){ render_dashes(JSON.parse(data)); },
+                error: function(){ alert("something went wrong."); }
+            });
+        }
+
+        var make_check_mouseover_text = function(check_obj){
+            var s = "";
+            s += "Num: " + check_obj.count;
+            var utc_seconds = check_obj.time;
+            var d = new Date(0);
+            d.setUTCSeconds(utc_seconds);
+            s += "<br/> Time: " + d.toISOString();
+            return s;
+        }
+
+        var get_cron_string_from_config_obj = function(config_obj){
+            var s = "cron: ";
+            s += " " + config_obj.cron_minutes;
+            s += " " + config_obj.cron_hours;
+            s += " " + config_obj.cron_days_of_month;
+            s += " " + config_obj.cron_months;
+            s += " " + config_obj.cron_days_of_week;
+            s += " currently needing " + config_obj.num_required;
+            s += " over " + config_obj.lookback_string;
+            return s;
+        }
+
+        var render_dashes = function(check_history){
+            $("#dashes").html("");
+            var regex = new RegExp($("#event-name-regex").val());
+            for(var key in check_history){
+                if(!regex.test(key)){
+                    continue;
+                }
+                var event_config = affirmative_ui.config_by_name[key];
+                var event_name_elem = $("<span class='event-name'></span>")
+                    .text(key);
+                var dash_container = $("<div class='dash-container'></div>");
+                dash_container.append(event_name_elem);
+                var dash_details = $("<div></div>");
+                var config_details = $("<div class='config-details'></div>")
+                    .text(get_cron_string_from_config_obj(event_config));
+                config_details.appendTo(dash_details);
+                var this_history = check_history[key];
+                for(var i = 0; i < this_history.length; i++){
+                    var this_check = this_history[i];
+                    if(this_check.met_required){
+                        $("<img class='check-pass' src='/static/green_checkmark.svg'/>")
+                            .appendTo(dash_details)
+                            .tooltip({content: make_check_mouseover_text(this_check), items: "img"});
+                    }
+                    else{
+                        $("<img class='check-fail' src='/static/red_x.png' />")
+                            .appendTo(dash_details)
+                            .tooltip({content: make_check_mouseover_text(this_check), items: "img"});
+                    }
+                }
+                dash_details.appendTo(dash_container);
+                dash_container.appendTo("#dashes");
+                
+                
+            }
+        }
+
+        $("#submit-regex-button").click(function(){
+            get_dash_data();
+        });
+
+        get_config();
+        get_dash_data();
+
+    });
+
+</script>
+
+<div class='container'>
+    <a class='nav-link' href='manage_events'>Config</a></br/>
+    <h2>View Events</h2>
+    <p>Mouseover displayed icons to see details of the outcome for the event.</p>
+    Event name regex <input id='event-name-regex'/> <button id='submit-regex-button'>Search</button>
+    <br/>
+    <br/>
+    <div id='dashes'></div>
+</div>

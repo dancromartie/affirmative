@@ -23,7 +23,13 @@ from your app.  No matter what, there are some things that you just want to
 _know_ are happening.
 
 That's where these "positive affirmations" come in.  It's not logging an error,
-because there was no "error".  You just want to know that sh*t is getting done,
+because there was no "error".  You just want to know that sh!t is getting done,
 whether it be you writing your one piece of docs for the day, your team pair
 programming for an hour, or your daily backup routine finishing and passing all
 integrity tests.
+
+## Screenshots ##
+### Configuration Page ###
+![Alt text](https://github.com/dcromartie/affirmative/screenshots/config_events.jpg "Optional title")
+### Monitoring Page ###
+![Alt text](https://github.com/dcromartie/affirmative/screenshots/view_events.jpg "Optional title")

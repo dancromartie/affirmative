@@ -30,6 +30,6 @@ integrity tests.
 
 ## Screenshots ##
 ### Configuration Page ###
-![Alt text](https://github.com/dcromartie/affirmative/screenshots/config_events.jpg "Optional title")
+![Alt text](https://github.com/dcromartie/affirmative/screenshots/config_events.png "Optional title")
 ### Monitoring Page ###
-![Alt text](https://github.com/dcromartie/affirmative/screenshots/view_events.jpg "Optional title")
+![Alt text](https://github.com/dcromartie/affirmative/screenshots/view_events.png "Optional title")

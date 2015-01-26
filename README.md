@@ -73,12 +73,12 @@ And there's a shell script that can be used like:
 ./shell_client.sh localhost:5123 prod machine_learning_model_under_control
 ```
 
-I hope to add a javascript version too, so that you can reord "sign-off" events
+I hope to add a javascript version too, so that you can record "sign-off" events
 from a gui as well, or simply track usage of certain features (from an "is this
 broken and theyre just not telling me" kind of perspective - there are probably
 other better tools for tracking intricate usage patterns on a UI)
 
-Since I personally with with a lot of R, or with a lot of people who use R (even for batch jobs), I
+Since I personally deal with a lot of R, or with a lot of people who use R (even for batch jobs), I
 might add an R wrapper too.
 
 

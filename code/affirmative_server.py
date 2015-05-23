@@ -13,7 +13,11 @@ import os.path
 
 from flask import Flask, request, url_for, render_template, json
 
-webapp = Flask(__name__)
+webapp = Flask(
+    __name__,
+    static_url_path='/affirmative/static',
+    static_folder="../static"
+)
 
 # You can have multiple configurations, you can toggle between them
 # There will be multiple configurations on disk, and you can have multiple in memory databases also

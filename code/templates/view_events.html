@@ -77,12 +77,12 @@ affirmative_ui.config_by_name = {};
                 for(var i = 0; i < this_history.length; i++){
                     var this_check = this_history[i];
                     if(this_check.met_required){
-                        $("<img class='check-pass' src='/static/green_checkmark.svg'/>")
+                        $("<img class='check-pass' src='/affirmative/static/green_checkmark.svg'/>")
                             .appendTo(dash_details)
                             .tooltip({content: make_check_mouseover_text(this_check), items: "img"});
                     }
                     else{
-                        $("<img class='check-fail' src='/static/red_x.png' />")
+                        $("<img class='check-fail' src='/affirmative/static/red_x.png' />")
                             .appendTo(dash_details)
                             .tooltip({content: make_check_mouseover_text(this_check), items: "img"});
                     }

@@ -1,47 +1,7 @@
-
+{% extends "layout.html" %}
+{% block content %}
 <!doctype html>
 <title>View Events</title>
-<script type="text/javascript" src="//cdn.jsdelivr.net/underscorejs/1.4.3/underscore-min.js"></script>
-<script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.0.3/jquery-2.0.3.min.js"></script>
-<link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0-rc1/css/bootstrap.min.css" rel="stylesheet">
-<script src="//code.jquery.com/ui/1.11.2/jquery-ui.js"></script>
-<link rel="stylesheet" href="//code.jquery.com/ui/1.11.2/themes/smoothness/jquery-ui.css">
-<style type='text/css'>
-    .nav-link{
-        font-size: 1.4em;
-    }
-    .event-wrapper{
-        padding: 10px;
-    }
-    .time-wrapper, .data-wrapper{
-        margin-right: 10px;
-    }
-    .event-container{
-        border: 2px solid black;
-        width: 300px;
-        float: left;
-        margin: 10px;
-    }
-    input{
-        width: 200px;
-    }
-    .event-name{
-        color: green;
-        margin-right: 5px;
-        font-size: 1.3em;
-    }
-    .dash-container{
-        margin-bottom: 20px;
-    }
-    .config-details{
-        margin-bottom: 10px;
-    }
-    .check-pass, .check-fail{
-        margin-right: 10px;
-        height: 25px;
-        width: 25px;
-    }
-</style>
 
 <script type="text/javascript">
 
@@ -145,12 +105,10 @@ affirmative_ui.config_by_name = {};
 
 </script>
 
-<div class='container'>
-    <a class='nav-link' href='manage_events'>Config</a></br/>
-    <h2>View Events</h2>
-    <p>Mouseover displayed icons to see details of the outcome for the event.</p>
-    Event name regex <input id='event-name-regex'/> <button id='submit-regex-button'>Search</button>
-    <br/>
-    <br/>
-    <div id='dashes'></div>
-</div>
+<h2>View Events</h2>
+<p>Mouseover displayed icons to see details of the outcome for the event.</p>
+Event name regex <input id='event-name-regex'/> <button id='submit-regex-button'>Search</button>
+<br/>
+<br/>
+<div id='dashes'></div>
+{% endblock %}

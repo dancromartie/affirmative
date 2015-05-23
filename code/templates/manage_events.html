@@ -1,11 +1,7 @@
-
+{% extends "layout.html" %}
 <!doctype html>
+{% block content %}
 <title>Manage Events</title>
-<script type="text/javascript" src="//cdn.jsdelivr.net/underscorejs/1.4.3/underscore-min.js"></script>
-<script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.0.3/jquery-2.0.3.min.js"></script>
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.1/js/jquery.dataTables.min.js"></script>
-<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.1/css/jquery.dataTables.min.css">
-<link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0-rc1/css/bootstrap.min.css" rel="stylesheet">
 <style type='text/css'>
     .nav-link{
         font-size: 1.4em;
@@ -183,40 +179,38 @@
 
 </script>
 
-<div class='container'>
-    <a class='nav-link' href='view_events'>Dashboard</a></br/>
-    <h2>Manage Events</h2>
-    <table id='config-table'>
-        <thead>
-        <tr>
-            <th>Name</th>
-            <th>Key</th>
-            <th>Minutes</th>
-            <th>Hours</th>
-            <th>Day of Month</th>
-            <th>Months</th>
-            <th>Days of Week</th>
-            <th># Required</th>
-            <th>Lookback</th>
-        </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
-    <h3>Register or update an event</h3>
-    Name: <input id='new-event-name' /><br/><br/>
+<h2>Manage Events</h2>
+<table id='config-table'>
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Key</th>
+        <th>Minutes</th>
+        <th>Hours</th>
+        <th>Day of Month</th>
+        <th>Months</th>
+        <th>Days of Week</th>
+        <th># Required</th>
+        <th>Lookback</th>
+    </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+<h3>Register or update an event</h3>
+Name: <input id='new-event-name' /><br/><br/>
 
-    Cron Minutes: <input class='cron-input' id='new-event-cron-minutes' /> (0-59)  <br/>
-    Cron Hours: <input class='cron-input' id='new-event-cron-hours' /> (0-59) <br/>
-    Cron Days of Month: <input class='cron-input' id='new-event-cron-days-of-month' /> (1-31) <br/>
-    Cron Months: <input class='cron-input' id='new-event-cron-months' /> (0-11) <br/>
-    Cron Days of Week: <input class='cron-input' id='new-event-cron-days-of-week' /> (0-6, 0 = Sunday) <br/><br/>
+Cron Minutes: <input class='cron-input' id='new-event-cron-minutes' /> (0-59)  <br/>
+Cron Hours: <input class='cron-input' id='new-event-cron-hours' /> (0-59) <br/>
+Cron Days of Month: <input class='cron-input' id='new-event-cron-days-of-month' /> (1-31) <br/>
+Cron Months: <input class='cron-input' id='new-event-cron-months' /> (0-11) <br/>
+Cron Days of Week: <input class='cron-input' id='new-event-cron-days-of-week' /> (0-6, 0 = Sunday) <br/><br/>
 
-    Num Required: <input id='new-event-num-required' /> (This is how many events you need to see from the check.)<br/>
-    Lookback String: <input id='new-event-lookback-string' /> (This says how far back in time we will look to count events.)<br/><br/>
+Num Required: <input id='new-event-num-required' /> (This is how many events you need to see from the check.)<br/>
+Lookback String: <input id='new-event-lookback-string' /> (This says how far back in time we will look to count events.)<br/><br/>
 
-    <button id='new-event-button'>Submit</button><br/><br/>
-    <h3>Unregister an event</h3>
-    Delete event with name: <input id='event-name-to-delete' name='event-name-to-delete'/><br/>
-    <button id='delete-event-button'>Submit</button>
-</div>
+<button id='new-event-button'>Submit</button><br/><br/>
+<h3>Unregister an event</h3>
+Delete event with name: <input id='event-name-to-delete' name='event-name-to-delete'/><br/>
+<button id='delete-event-button'>Submit</button>
+{% endblock %}

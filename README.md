@@ -1,6 +1,8 @@
 # affirmative
 a python webservice for making sure events happen
 
+# Overview
+
 ## What it does ##
 This isn't monitoring per se, nor testing.  This is kind of a "daily
 checklist for technology operations".  For example "make sure that model xyz
@@ -110,3 +112,37 @@ dump records to a file on disk periodically to improve resilience.
 ![Alt text](/screenshots/config_events.png?raw=true "Optional title")
 ### Monitoring Page ###
 ![Alt text](/screenshots/view_events.png?raw=true "Optional title")
+
+# Dev details
+
+## Starting the app
+Run ./start_dev.sh.  The start script is pretty simple. Look at it to see the arguments, 
+but defaults are provided.
+
+## Running the sample client
+Run python run_client_test.py.  This requires that you have the event names referenced in that file 
+created already.
+
+## Keeping the checks running
+While this tries to wrap a cron like thing, the actual checks are run minutely by a cron 
+job.  Setting that job up on your local machine might not be what you want, so I like to do this 
+in another terminal tab:
+
+```
+for run in {1..1000}; do curl "http://localhost:5123/affirmative/do_minutely_cron_dont_touch_this" && sleep 60; done;
+```
+
+This will run the minutely checks for 1000 minutes.  You could set up the cron in your own crontab 
+or use Vagrant or something to run this all so you don't muck up your machine.
+
+
+## Clearing all checks
+Restart the server to wipe out the in-memory database.  Hopefully there will be a better way 
+in the future.
+
+
+
+
+
+
+

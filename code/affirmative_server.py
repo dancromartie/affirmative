@@ -108,7 +108,7 @@ def dump_memory_to_disk():
 
 @webapp.route("/affirmative/store", methods=["POST"])
 def store_event():
-    logging.info("request data is ", request.data)
+    logging.info("request data is %s", request.data)
     payload = json.loads(request.data)
     events = payload["events"]
     logging.info(events)
@@ -310,6 +310,11 @@ def render_manage_events():
 def render_view_events():
     update_event_config()
     return render_template("view_events.html")
+
+
+@webapp.route("/affirmative/about", methods=["GET"])
+def render_about():
+    return render_template("about.html")
 
 
 @webapp.route("/affirmative/get_event_config", methods=["GET"])

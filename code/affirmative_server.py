@@ -19,11 +19,6 @@ webapp = Flask(
     static_folder="../static"
 )
 
-# You can have multiple configurations, you can toggle between them
-# There will be multiple configurations on disk, and you can have multiple in memory databases also
-# For now, I'm only going to let one be active at a time, though
-# This will get set in start script
-
 logging.basicConfig(
     filename='../logs/affirmative.log', 
     level=logging.DEBUG,
@@ -32,17 +27,6 @@ logging.basicConfig(
 logging.info("Im alive!")
 
 
-# Build the memory table
-mem_conn = sqlite3.connect(":memory:")
-mem_cursor = mem_conn.cursor()
-mem_cursor.row_factory = sqlite3.Row
-
-# Env is kind of a synonym for instance right now
-table_creation_string = "CREATE TABLE events (time integer, env text, name text, data text)"
-mem_cursor.execute(table_creation_string)
-mem_cursor.execute("CREATE INDEX idx_event_time_name ON events (time, env, name)")
-mem_conn.commit()
-
 # Anything that's not dumped after this long should get purged
 RECORD_LIFETIME_DAYS = 2
 
@@ -50,28 +34,38 @@ event_config = []
 check_history = {}
 
 
-def get_db_path():
+def get_config_db_path():
     return "../data/" + webapp.config["INSTANCE"] + ".db"
 
-def execute_insert_disk(query, params):
-    conn = sqlite3.connect(get_db_path())
+
+def get_stats_db_path():
+    return "../data/" + webapp.config["INSTANCE"] + ".stats.db"
+
+
+def execute_insert_disk(db_path, query, params, many=False):
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    cursor.execute(query, params)
+    if many:
+        # Params needs to be a list of tuples in this case
+        cursor.executemany(query, params)
+    else:
+        # Params needs to be one tuple in this case
+        cursor.execute(query, params)
     conn.commit()
     conn.close()
 
 
-def execute_schema_build_stuff(query):
-    conn = sqlite3.connect(get_db_path())
+def execute_schema_build_stuff(db_path, query):
+    conn = sqlite3.connect(db_path)
     conn.execute(query, ())
     conn.commit()
     conn.close()
 
 
-def query_to_dicts(query, params):
+def query_to_dicts(db_path, query, params):
     try:
         dict_results = []
-        conn = sqlite3.connect(get_db_path())
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.row_factory = sqlite3.Row
         query_results = cursor.execute(query, params)
@@ -82,16 +76,25 @@ def query_to_dicts(query, params):
         conn.close()
 
 
-def build_instance_if_doesnt_exist():
-    instance_exists = os.path.isfile(get_db_path()) 
+def build_tables(config_db_path, stats_db_path):
+    instance_exists = os.path.isfile(config_db_path) or os.path.isfile(stats_db_path)
     if instance_exists:
         logging.info(
             "Instance with that name already exists.  Delete db if you wanted a new one."
         )
     
     else:
-        execute_schema_build_stuff("DROP TABLE IF EXISTS event_config")
-        execute_schema_build_stuff("""
+
+        execute_schema_build_stuff(stats_db_path, """
+            CREATE TABLE events (time integer, env text, name text, data text)
+        """)
+
+        execute_schema_build_stuff(stats_db_path, """
+            CREATE INDEX idx_event_time_name ON events (time, env, name)
+        """)
+
+        execute_schema_build_stuff(config_db_path, "DROP TABLE IF EXISTS event_config")
+        execute_schema_build_stuff(config_db_path, """
             CREATE TABLE event_config (
                 name text, 
                 key text, 
@@ -104,10 +107,6 @@ def build_instance_if_doesnt_exist():
                 cron_days_of_week text
             )
         """)
-
-
-def dump_memory_to_disk():
-    pass
 
 
 @webapp.route("/affirmative/store", methods=["POST"])
@@ -125,8 +124,7 @@ def store_event():
     for e in events:
         to_write.append((e["env"], time.time(), e["name"], e["data"]))
 
-    mem_cursor.executemany(query, to_write)
-    mem_conn.commit()
+    execute_insert_disk(get_stats_db_path(), query, to_write, many=True)
 
     # Delete old rows every couple hundred/thousand of events you receive
     rando = random.randint(1, 300)
@@ -207,7 +205,7 @@ def is_time_to_check(datetime_obj, config_record):
 def do_check(name):
     query = "SELECT * FROM event_config WHERE name = ?"
     first_result = None
-    query_results = query_to_dicts(query, (name,))
+    query_results = query_to_dicts(get_config_db_path(), query, (name,))
     if len(query_results) == 0:
         return {"error": "no event configuration for that name"}
     else:
@@ -227,12 +225,11 @@ def do_check(name):
             WHERE time > ?
             AND name = ?
         """
-        mem_cursor.execute(query, (epoch_cutoff, name))
-        first_result = mem_cursor.fetchone()
-        if first_result is None:
+        results = query_to_dicts(get_stats_db_path(), query, (epoch_cutoff, name))
+        if len(results) == 0:
             count = 0
         else:
-            count = first_result["count"]
+            count = results[0]["count"]
         met_required = count >= num_required
         return {"count": count, "met_required": met_required, "time": now_epoch}
 
@@ -260,13 +257,15 @@ def get_few_days_ago_string():
 def delete_old_rows():
     logging.info("DELETING OLD ROWS")
     few_days_ago_str = get_few_days_ago_string()
-    mem_cursor.execute("DELETE FROM events WHERE time < ?", (few_days_ago_str,))
-    mem_conn.commit()
+    execute_insert_disk(
+        get_stats_db_path(),
+        "DELETE FROM events WHERE time < ?", 
+        (few_days_ago_str,)
+    )
 
 
 @webapp.route("/affirmative/get_events/<env>/<name>", methods=["GET"])
 def get_events(env, name):
-    to_return = []
     few_days_ago_str = get_few_days_ago_string()
     query = """
         SELECT * FROM events
@@ -275,10 +274,8 @@ def get_events(env, name):
         ORDER BY time DESC
         LIMIT 10000
     """
-    results = mem_cursor.execute(query, (env, name, few_days_ago_string))
-    for result in results:
-        to_return.append(dict(result))
-    return json.dumps(to_return)
+    results = query_to_dicts(get_stats_db_path(), query, (env, name, few_days_ago_string))
+    return json.dumps(results)
 
 
 @webapp.route("/affirmative/get_all_stats", methods=["GET"])
@@ -291,7 +288,7 @@ def get_all_stats():
     stats_to_return = []
     event_config_copy = copy.deepcopy(event_config)
     query = "SELECT count(1) as count, name FROM events WHERE env='prod' GROUP BY name"
-    results = mem_cursor.execute(query, ())
+    results = query_to_dicts(get_stats_db_path(), query, ())
     for r in results:
         stats_by_name[r["name"]] = dict(r)
     for conf in event_config_copy:
@@ -330,7 +327,7 @@ def get_event_config_web():
 def get_event_config():
     event_config = []
     query = "SELECT * FROM event_config"
-    results = query_to_dicts(query, ())
+    results = query_to_dicts(get_config_db_path(), query, ())
     for r in results:
         event_config.append(r)
     return event_config
@@ -459,7 +456,7 @@ def register_or_update_event():
             return invalid_cron_string_message(val)
 
     already_exists_query = """SELECT name FROM event_config WHERE name = ? """
-    name_exists_results = query_to_dicts(already_exists_query, (event_name,))
+    name_exists_results = query_to_dicts(get_config_db_path(), already_exists_query, (event_name,))
     if len(name_exists_results) == 0:
         insert_query = """
             INSERT INTO event_config (
@@ -477,7 +474,7 @@ def register_or_update_event():
             event_name, key, num_required, lookback_string, cron_minutes,
             cron_hours, cron_days_of_month, cron_months, cron_days_of_week
         )
-        execute_insert_disk(insert_query, data)
+        execute_insert_disk(get_config_db_path(), insert_query, data)
     else:
         update_query = """
             UPDATE event_config SET num_required = ?, lookback_string = ?, cron_minutes = ?,
@@ -488,7 +485,7 @@ def register_or_update_event():
             num_required, lookback_string, cron_minutes,
             cron_hours, cron_days_of_month, cron_months, cron_days_of_week, event_name
         )
-        execute_insert_disk(update_query, data)
+        execute_insert_disk(get_config_db_path(), update_query, data)
 
     update_event_config()
     return "yay"
@@ -497,7 +494,7 @@ def register_or_update_event():
 @webapp.route("/affirmative/unregister_event", methods=["POST"])
 def unregister_event():
     name = request.form["name_to_delete"]
-    execute_insert_disk("DELETE FROM event_config WHERE name = ?", (name,))
+    execute_insert_disk(get_config_db_path(), "DELETE FROM event_config WHERE name = ?", (name,))
     update_event_config()
     return "yay"
 
@@ -506,7 +503,7 @@ def update_event_config():
     global event_config
     event_config = []
     query = "SELECT * FROM event_config"
-    results = query_to_dicts(query, ())
+    results = query_to_dicts(get_config_db_path(), query, ())
     for r in results:
         print r
         event_config.append(r)
@@ -520,7 +517,8 @@ def build_app(debug, instance):
     logging.info("using debug=%s" % debug)
     webapp.config["DEBUG"] = debug
     webapp.config["INSTANCE"] = instance
-    build_instance_if_doesnt_exist()
+
+    build_tables(config_db_path=get_config_db_path(), stats_db_path=get_stats_db_path())
     update_event_config()
     logging.info("got here")
 

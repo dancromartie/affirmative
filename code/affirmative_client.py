@@ -6,9 +6,10 @@ import time
 
 class Client:
 
-    def __init__(self, url, environment):
+    def __init__(self, url, environment, verify_cert=True):
         self.storage_url = url + "/affirmative/store"
         self.environment = environment
+        self.verify_cert = verify_cert
 
     def affirm_one(self, name, data):
         utc_datetime = datetime.utcnow()
@@ -19,4 +20,10 @@ class Client:
             ]
         }
         headers = {'content-type': 'application/json'}
-        requests.post(self.storage_url, data=json.dumps(payload), headers=headers, timeout=.1)
+        requests.post(
+            self.storage_url,
+            data=json.dumps(payload),
+            headers=headers,
+            verify=self.verify_cert,
+            timeout=.1
+        )

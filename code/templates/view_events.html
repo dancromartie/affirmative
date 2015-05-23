@@ -73,7 +73,7 @@ affirmative_ui.config_by_name = {};
                 var config_details = $("<div class='config-details'></div>")
                     .text(get_cron_string_from_config_obj(event_config));
                 config_details.appendTo(dash_details);
-                var this_history = check_history[key];
+                var this_history = check_history[key].slice(-10);
                 for(var i = 0; i < this_history.length; i++){
                     var this_check = this_history[i];
                     if(this_check.met_required){

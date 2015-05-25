@@ -3,6 +3,18 @@ python webservice for making sure events happen.
 
 # Overview
 
+## TL;DR 
+
+Send event "called_customer" to service when you call a customer.
+At times specified by "0,30 * * * 1-5", make sure you get between 35 and 90 events in the 45 minutes
+preceding the check. 
+
+OR maybe...
+
+Send event "some_app_alive" to service when it is pinged.
+At times specified by "*, *, *, * *", make sure you get between 1 and 1 events in the 1 minute 
+preceding the check.
+
 ## What it does ##
 
 This isn't monitoring per se, nor testing.  This is kind of a "checklist for

@@ -45,7 +45,8 @@ problem, then it's fair to say that the absence of that email does not mean
 that there is evidence that there is no problem.  If you know that the thing
 sending your confirmation is well hooked into the process and that it is
 reporting back as often as it should be, then when you send confirmation that
-something good DID happen, you have evidence of absence of a problem.
+something good DID happen, you have evidence of absence of a problem.  It's very important that 
+people can trust the test that says "things are good" though, or none of this works.
 
 Just think about when somebody goes off into a blizzard or into a tunnel in a
 zombie movie.  They say "Jimmy, call for help if you don't hear from me in 5
@@ -127,6 +128,9 @@ from a gui as well, or simply track usage of certain features (from an "is this
 broken and theyre just not telling me" kind of perspective - there are probably
 other better tools for tracking intricate usage patterns on a UI)
 
+For now, you can look at the "trigger page" to see how to implement your own JS client.  I just 
+need to make it portable.
+
 
 ## keys vs event names##
 
@@ -139,8 +143,8 @@ name, but the _check_ is what has a key.
 
 ## Technologies ##
 This uses Flask and sqlite.  There are plenty of javascript libraries for the
-UI, but those are pretty easy to install or come from CDNs, so the number of dependencies is pretty
-low. 
+UI, but those are pretty easy to install or come from CDNs, so installation
+should really just require installing Flask and starting the server.
 
 ## Why not more?
 
@@ -189,3 +193,4 @@ for run in {1..1000}; do curl "http://localhost:5123/affirmative/do_minutely_cro
 This will run the minutely checks for 1000 minutes.  You could set up the cron in your own crontab 
 or use Vagrant or something to run this all so you don't muck up your machine.
 
+I also like to just put that url in my browser bar and trigger the event with a page refresh if I don't want to wait a minute between checks.

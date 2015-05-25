@@ -52,21 +52,32 @@ $(document).ready(function(){
         s += " " + config_obj.cron_days_of_month;
         s += " " + config_obj.cron_months;
         s += " " + config_obj.cron_days_of_week;
-        s += " currently needing " + config_obj.num_required;
+        s += " currently needing between " + config_obj.min_allowed + " and " + 
+            config_obj.max_allowed;
         s += " over " + config_obj.lookback_string;
         return s;
+    }
+
+    var get_last_event_time_string_from_history = function(history){
+        var now_epoch = Math.floor((new Date).getTime()/1000);
+        var last_epoch = history[history.length - 1].time;
+        var minutes_ago = (now_epoch - last_epoch) / 60;
+        return "Last check was " + minutes_ago.toFixed(2) + " minutes ago."
     }
 
     var render_dashes = function(check_history){
         $("#dashes").html("");
         var regex = new RegExp($("#event-name-regex").val());
         for(var key in check_history){
-            console.log("key is", key);
+
             var event_config = affirmative_ui.config_by_key[key];
             var event_name = event_config.name;
             if(!regex.test(event_name)){
                 continue;
             }
+
+            var this_history = check_history[key].slice(-10);
+
             var event_name_elem = $("<span class='event-name'></span>")
                 .text(event_name + " (" + key + ")");
             var dash_container = $("<div class='dash-container'></div>");
@@ -74,12 +85,18 @@ $(document).ready(function(){
             var dash_details = $("<div></div>");
             var config_details = $("<div class='config-details'></div>")
                 .text(get_cron_string_from_config_obj(event_config));
+            var last_event_details = $("<div class='last-event-details'></div>")
+                .text(get_last_event_time_string_from_history(this_history));
+
             config_details.appendTo(dash_details);
-            var this_history = check_history[key].slice(-10);
+            last_event_details.appendTo(dash_details);
+
             for(var i = 0; i < this_history.length; i++){
                 var this_check = this_history[i];
                 var mouseover_text = make_check_mouseover_text(this_check);
-                if(this_check.num_observed >= this_check.num_required){
+                var in_bounds = this_check.num_observed >= this_check.min_allowed && 
+                    this_check.num_observed <= this_check.max_allowed;
+                if(in_bounds){
                     $("<img class='check-pass' src='/affirmative/static/green_checkmark.svg'/>")
                         .appendTo(dash_details)
                         .tooltip({content: mouseover_text, items: "img"});

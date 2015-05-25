@@ -57,7 +57,8 @@
                     { "data": "cron_days_of_month"},
                     { "data": "cron_months"},
                     { "data": "cron_days_of_week"},
-                    { "data": "num_required"},
+                    { "data": "min_allowed"},
+                    { "data": "max_allowed"},
                     { "data": "lookback_string"}
                 ],
                 "order": [[0, "asc"]],
@@ -135,7 +136,8 @@
                 return false;
             }
             var key = $("#update-event-key").val();
-            var num_required = $("#update-event-num-required").val();
+            var min_allowed = $("#update-event-min-allowed").val();
+            var max_allowed = $("#update-event-max-allowed").val();
             var lookback_string = $("#update-event-lookback-string").val();
 
             var cron_minutes = $("#update-event-cron-minutes").val();
@@ -146,7 +148,8 @@
 
             var data = {
                 key: key,
-                num_required: num_required,
+                min_allowed: min_allowed,
+                max_allowed: max_allowed,
                 lookback_string: lookback_string,
                 cron_minutes: cron_minutes,
                 cron_hours: cron_hours,
@@ -209,7 +212,8 @@
         <th>Day of Month</th>
         <th>Months</th>
         <th>Days of Week</th>
-        <th># Required</th>
+        <th>Min Allowed</th>
+        <th>Max Allowed</th>
         <th>Lookback</th>
     </tr>
     </thead>
@@ -228,7 +232,8 @@ Cron Days of Month: <input class='cron-input' id='update-event-cron-days-of-mont
 Cron Months: <input class='cron-input' id='update-event-cron-months' /> (0-11) <br/>
 Cron Days of Week: <input class='cron-input' id='update-event-cron-days-of-week' /> (0-6, 0 = Sunday) <br/><br/>
 
-Num Required: <input id='update-event-num-required' /> (This is how many events you need to see from the check.)<br/>
+Min allowed: <input id='update-event-min-allowed' /><br/>
+Max allowed: <input id='update-event-max-allowed' /><br/>
 Lookback String: <input id='update-event-lookback-string' /> (This says how far back in time we will look to count events.)<br/><br/>
 
 <button id='update-event-button'>Submit</button><br/><br/>

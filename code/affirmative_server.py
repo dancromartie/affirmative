@@ -92,7 +92,7 @@ def build_tables(config_db_path, stats_db_path):
 
         execute_schema_build_stuff(stats_db_path, """
             CREATE TABLE check_history 
-            (time integer, key text, num_required integer,
+            (time integer, key text, min_allowed integer, max_allowed integer, 
                 num_observed integer)
         """)
 
@@ -101,7 +101,8 @@ def build_tables(config_db_path, stats_db_path):
             CREATE TABLE event_config (
                 name text, 
                 key text, 
-                num_required integer, 
+                max_allowed integer, 
+                min_allowed integer,
                 lookback_string integer, 
                 cron_minutes text,
                 cron_hours text,
@@ -159,9 +160,11 @@ def do_minutely_cron():
 def get_check_history_web():
     return json.dumps(get_check_history())
 
+
 @webapp.route("/affirmative/do_check/<key>", methods=["GET"])
 def do_check_web(key):
-    return json.dumps(do_check(key))
+    do_check(key)
+    return "yay"
 
 
 def passes_cron_criteria(num, cron_expression):
@@ -213,7 +216,8 @@ def do_check(key):
             return {"message": "not time for check yet"}
         name = first_result["name"]
         lookback_string = first_result["lookback_string"]
-        num_required = first_result["num_required"]
+        min_allowed = first_result["min_allowed"]
+        max_allowed = first_result["max_allowed"]
         now_epoch = time.time()
         epoch_delta = epoch_delta_from_lookback_string(lookback_string)
         epoch_cutoff = now_epoch - epoch_delta
@@ -228,20 +232,13 @@ def do_check(key):
             count = 0
         else:
             count = results[0]["count"]
-        met_required = count >= num_required
-        result = {
-            "count": count,
-            "num_required": num_required,
-            "met_required": met_required,
-            "time": now_epoch
-        }
+        met_required = count >= min_allowed and count <= max_allowed
         insert_query = """
-            INSERT INTO check_history (time, key, num_required, num_observed)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO check_history (time, key, min_allowed, max_allowed, num_observed)
+            VALUES (?, ?, ?, ?, ?)
         """
-        data = (now_epoch, key, num_required, count)
+        data = (now_epoch, key, min_allowed, max_allowed, count)
         execute_insert_disk(get_stats_db_path(), insert_query, data)
-        return result
 
 
 def epoch_delta_from_lookback_string(lookback_string):
@@ -434,13 +431,13 @@ def register_event():
     ]
     key = "".join([random.choice(key_components) for i in range(6)])
     insert_query = """
-        INSERT INTO event_config (name, key, num_required, lookback_string, cron_minutes, 
-            cron_hours, cron_days_of_month, cron_months, cron_days_of_week
+        INSERT INTO event_config (name, key, min_allowed, max_allowed, lookback_string, 
+            cron_minutes, cron_hours, cron_days_of_month, cron_months, cron_days_of_week
         )
         VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
-    data = (event_name, key, 0, "1000d", 1, 1, 1, 1, 1)
+    data = (event_name, key, 0, 9999999, "1000d", 1, 1, 1, 1, 1)
     execute_insert_disk(get_config_db_path(), insert_query, data)
     return "yay"
 
@@ -453,11 +450,17 @@ def update_event_config():
     if invalid_lookback_string_message(lookback_string):
         return invalid_lookback_string_message(lookback_string)
 
-    num_required_string = request.form["num_required"]
-    if invalid_num_required_message(num_required_string):
-        return invalid_num_required_message(num_required_string)
+    min_allowed_string = request.form["min_allowed"]
+    max_allowed_string = request.form["max_allowed"]
 
-    num_required = int(num_required_string)
+    if invalid_num_required_message(min_allowed_string):
+        return invalid_num_required_message(min_allowed_string)
+
+    if invalid_num_required_message(max_allowed_string):
+        return invalid_num_required_message(max_allowed_string)
+
+    min_allowed = int(min_allowed_string)
+    max_allowed = int(max_allowed_string)
 
     cron_minutes = request.form["cron_minutes"]
     cron_hours = request.form["cron_hours"]
@@ -473,12 +476,13 @@ def update_event_config():
             return invalid_cron_string_message(val)
 
     update_query = """
-        UPDATE event_config SET num_required = ?, lookback_string = ?, cron_minutes = ?,
-        cron_hours = ?, cron_days_of_month = ?, cron_months = ?, cron_days_of_week = ?
+        UPDATE event_config SET min_allowed = ?, max_allowed = ?, lookback_string = ?,
+            cron_minutes = ?, cron_hours = ?, cron_days_of_month = ?, cron_months = ?, 
+            cron_days_of_week = ?
         WHERE key = ?
     """
     data = (
-        num_required, lookback_string, cron_minutes,
+        min_allowed, max_allowed, lookback_string, cron_minutes,
         cron_hours, cron_days_of_month, cron_months, cron_days_of_week, key
     )
     execute_insert_disk(get_config_db_path(), update_query, data)

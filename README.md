@@ -1,11 +1,12 @@
 # affirmative
-a python webservice for making sure events happen
+python webservice for making sure events happen.
 
 # Overview
 
 ## What it does ##
+
 This isn't monitoring per se, nor testing.  This is kind of a "checklist for
-technology operations".  For example "make sure that model xyz seems to be
+(technology) operations".  For example "make sure that model xyz seems to be
 under control" is something that you want to verify every 3 days.  You can
 either have a person click a button to verify it, or you might have a script
 that runs complicated checks and then calls Affirmative's API.  
@@ -29,6 +30,32 @@ because there was no "error".  You just want to know that sh!t is getting done,
 whether it be you writing your one piece of docs for the day, your team pair
 programming for an hour sometime this week, or your daily backup routine
 finishing and passing all integrity tests.
+
+## A note about confirmation / the direction of things
+
+As you configure your checks, consider the fundamental difference between the following:
+ - procces_a_is_fine was received
+ - process_a_is_out_of_wack was not received
+
+The second message is not very powerful.
+
+Consider the statement: "Absence of evidence does not imply evidence of
+absence."  If we treat an email warning about an exception as evidence of a
+problem, then it's fair to say that the absence of that email does not mean
+that there is evidence that there is no problem.  If you know that the thing
+sending your confirmation is well hooked into the process and that it is
+reporting back as often as it should be, then when you send confirmation that
+something good DID happen, you have evidence of absence of a problem.
+
+Just think about when somebody goes off into a blizzard or into a tunnel in a
+zombie movie.  They say "Jimmy, call for help if you don't hear from me in 5
+minutes".  They don't say "Jimmy, I'll call you if I die".  Why is that?
+
+Now, all of this depends on Jimmy not dying or falling asleep back at the cabin.  If he does, 
+then no help gets sent.  Similarly, if our checker dies, then we're in trouble, and we'll get no 
+alerts.  I have to think about this more, but I think it's the kind of thing I want a siren and 
+light on my desk for - e.g. I should always have a green light blinking at my desk when it 
+successfully completes checks.  If the light goes dark, we have problems.
 
 ## Example Use Cases ##
 
@@ -114,6 +141,24 @@ name, but the _check_ is what has a key.
 This uses Flask and sqlite.  There are plenty of javascript libraries for the
 UI, but those are pretty easy to install or come from CDNs, so the number of dependencies is pretty
 low. 
+
+## Why not more?
+
+I am constantly tempted to put complicated things in here like checking against statistical limits, 
+looking for spikes and anomalies, checking averages/null proportions/percentiles etc.  Every time 
+I've thought about it so far, it just feels forced.  It's hard to make everybody happy with that.
+When I think of my employer's data monitoring problems, there aren't so many things that fit into 
+a framework neatly.  Some things are hairy and so have analysts combing over charts and timeseries.  
+Some things get so segmented and "grouped by" that maintaining these keys would be quite tedious.
+
+My suggestion to get around that is to use this as the alerting infrastructure.  For the metrics 
+you really care about, put some checks in a script and run it on a cron.  If your numbers don't 
+look good, or if that average looks too high or its a 30% spike from yesterday, don't send your 
+this_process_looks_good key to affirmative.  It will alert you as soon as the script finishes if you 
+configured your event checked right. If your script failed before it got to send confirmation, 
+you'll be investigating the next morning either way!
+
+
 
 
 ## Screenshots ##

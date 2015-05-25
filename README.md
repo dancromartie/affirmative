@@ -12,8 +12,8 @@ preceding the check.
 OR maybe...
 
 Send event "some_app_alive" to service when it is pinged.
-At times specified by "*, *, *, * *", make sure you get between 1 and 1 events in the 1 minute 
-preceding the check.
+At times specified by "*, *, *, *, 1-5", make sure you get between 1 and 1 events in the 1 minute 
+preceding the check. 
 
 ## What it does ##
 

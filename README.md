@@ -4,11 +4,11 @@ a python webservice for making sure events happen
 # Overview
 
 ## What it does ##
-This isn't monitoring per se, nor testing.  This is kind of a "daily
-checklist for technology operations".  For example "make sure that model xyz
-seems to be under control" is something that you want to verify every 3 days.
-You can either have a person click a button to verify it, or you might have a
-script that runs complicated checks and then calls Affirmative's API.  
+This isn't monitoring per se, nor testing.  This is kind of a "checklist for
+technology operations".  For example "make sure that model xyz seems to be
+under control" is something that you want to verify every 3 days.  You can
+either have a person click a button to verify it, or you might have a script
+that runs complicated checks and then calls Affirmative's API.  
 
 This is monitoring in a way, but you can't ask it the same question at any time
 and expect a reasonable answer to come back, like you often can when you are
@@ -27,8 +27,8 @@ _know_ are happening.
 That's where these "positive affirmations" come in.  It's not logging an error,
 because there was no "error".  You just want to know that sh!t is getting done,
 whether it be you writing your one piece of docs for the day, your team pair
-programming for an hour, or your daily backup routine finishing and passing all
-integrity tests.
+programming for an hour sometime this week, or your daily backup routine
+finishing and passing all integrity tests.
 
 ## Example Use Cases ##
 
@@ -52,12 +52,14 @@ Similarly, you might want to make sure that a certain health check completes at
 least 4 times every 5 minutes.  You could say event "app_xyz_health_check_good
 runs */5 * * * *, requires 4 events with a lookback of 5 minutes".
 
-All of the event data is available via some API urls, so people can do whatever they want with it,
-but I've made these basic cron checks out of the box.  If you _only_ want to store raw event data, this is probably a bad tool for that.
+All of the event data is available via some API urls, so people can do whatever
+they want with it, but I've made these basic cron checks out of the box.  If
+you _only_ want to store raw event data, this is probably a bad tool for that.
 
 ## Libraries / Scripts for various languages ##
 
-Right now there is a python module that can be used like:
+There is a python module that can be used like:
+
 ```python
 import affirmative_client
 
@@ -66,45 +68,52 @@ for i in range(1, 100):
     print "sending!"
     ac.affirm_one("that_critical_app_health_check", "good")
 ```
-The second argument is ignored for now, but it's meant to be an arbitrary string in case there's use 
-for a little JSON payload or a little discrimination on the client's part when they consume some API endpoints.
 
-And there's a shell script that can be used like:
+The second argument is ignored for now, but it's meant to be an arbitrary
+string in case there's use for a little JSON payload or a little discrimination
+on the client's part when they consume some API endpoints.
 
+
+At the time of this writing, you can build your own R client like so:
+
+```R
+AffirmOne <- function(url, eventName, data){
+    time <- as.integer(as.POSIXct( Sys.time() ))
+    dataAsObj <- list(events=list(list(name=eventName, time=time, data=data)))
+    curlPerform(url = url,
+        httpheader=c('Content-Type'= "application/json"),
+        postfields=RJSONIO::toJSON(dataAsObj),
+        verbose = TRUE
+    )
+}
+
+affirmativeEndpoint <- "http://localhost:5123/affirmative/store"
+
+AffirmOne(affirmativeEndpoint, "rtest", "ok")
+AffirmOne(affirmativeEndpoint, "rtest", "still ok")
+AffirmOne(affirmativeEndpoint, "rtest", "yep still ok")
 ```
-./shell_client.sh localhost:5123 prod machine_learning_model_under_control
-```
+
 
 I hope to add a javascript version too, so that you can record "sign-off" events
 from a gui as well, or simply track usage of certain features (from an "is this
 broken and theyre just not telling me" kind of perspective - there are probably
 other better tools for tracking intricate usage patterns on a UI)
 
-Since I personally deal with a lot of R, or with a lot of people who use R (even for batch jobs), I
-might add an R wrapper too.
 
+## keys vs event names##
 
-## Keys ##
-
-Each event name has an associated short, ugly, random "key" that goes along
-with it.  I need to think about this better, but the idea is that if you put it
-in your code (maybe as a comment) right by the lines of code that log the
-events, all of those occurences can be grepped out by a code search tool or
-command line.  That will open the door to future stuff like "show me everywhere
-I touch this event's statistics" which might improve software quality a
-little...  If the definition of what qualifies as the event changes, then
-having multiple calls with different ideas of the metric can wreak havoc on
-your business processes, and you want to make sure you find them all.  Not sure
-how you would get around old production binaries etc, but it would help at
-least.
+Each "cron" that you configure has as associated key (i.e. a random unique id).
+For instance, you might have an event "complaint_received", and you want to
+make sure that on weekdays you're getting at least 3 complaints a day, but on
+weekends you expect at least 1.  You would set up two "cron"s with the same
+name, but the _check_ is what has a key.
 
 
 ## Technologies ##
 This uses Flask and sqlite.  There are plenty of javascript libraries for the
-UI, but all the scripts come from CDNs, so the number of dependencies is pretty
-low.  The sqlite database is in-memory for the actual event data, but all of
-the configuration is stored on disk.  Eventually the in memory database should
-dump records to a file on disk periodically to improve resilience.
+UI, but those are pretty easy to install or come from CDNs, so the number of dependencies is pretty
+low. 
 
 
 ## Screenshots ##
@@ -134,15 +143,4 @@ for run in {1..1000}; do curl "http://localhost:5123/affirmative/do_minutely_cro
 
 This will run the minutely checks for 1000 minutes.  You could set up the cron in your own crontab 
 or use Vagrant or something to run this all so you don't muck up your machine.
-
-
-## Clearing all checks
-Restart the server to wipe out the in-memory database.  Hopefully there will be a better way 
-in the future.
-
-
-
-
-
-
 

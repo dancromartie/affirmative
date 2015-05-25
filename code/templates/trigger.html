@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% block content %}
+<!doctype html>
+<title>Trigger Events</title>
+
+<script type="text/javascript">
+
+// Global container
+affirmative_ui = {};
+affirmative_ui.config_by_key = {};
+
+$(document).ready(function(){
+    $("#trigger-event-button").click(function(){
+        var event_name = $("#event-name-input").val();
+        var payload = {
+            "events": [
+                {
+                    "name": event_name,
+                    "time": Math.floor((new Date).getTime()/1000),
+                    "data": "ok"
+                }
+            ]
+        }
+        $.ajax({
+            url: "/affirmative/store",
+            data: JSON.stringify(payload),
+            contentType : "application/json",
+            type: "POST",
+            success: function(resp){ $("<div>" + resp + "</div>").appendTo("#results");},
+            error: function(resp){ alert("something went wrong"); }
+        });
+    });
+
+});
+
+</script>
+
+<h3>Trigger Event</h3>
+Event name <input id='event-name-input' /> <button id='trigger-event-button'>go</button>
+<div id='results'></div>
+{% endblock %}
+

@@ -16,7 +16,7 @@ class Client:
         now_ts = utc_datetime.strftime("%Y-%m-%d %H:%M:%S.%f")
         payload = {
             "events": [
-                {"env": self.environment, "name": name, "time": time.time(), "data": data}
+                {"name": name, "time": time.time(), "data": data}
             ]
         }
         headers = {'content-type': 'application/json'}

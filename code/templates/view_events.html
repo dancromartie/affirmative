@@ -5,109 +5,132 @@
 
 <script type="text/javascript">
 
-    // Global container
-    affirmative_ui = {};
-affirmative_ui.config_by_name = {};
+// Global container
+affirmative_ui = {};
+affirmative_ui.config_by_key = {};
 
-    $(document).ready(function(){
+$(document).ready(function(){
 
-        var get_config = function(){
-            $.ajax({
-                url: "/affirmative/get_event_config",
-                data: {},
-                async: false,
-                success: function(data){ 
-                    var config = JSON.parse(data);
-                    for(var i = 0; i < config.length; i++){
-                        var this_config = config[i];
-                        affirmative_ui.config_by_name[this_config.name] = this_config;
-                    }
-                },
-                error: function(){ alert("something went wrong."); }
-            });
-        }
-        var get_dash_data = function(){
-            $.ajax({
-                url: "/affirmative/get_check_history",
-                data: {},
-                success: function(data){ render_dashes(JSON.parse(data)); },
-                error: function(){ alert("something went wrong."); }
-            });
-        }
-
-        var make_check_mouseover_text = function(check_obj){
-            var s = "";
-            s += "Num: " + check_obj.count;
-            var utc_seconds = check_obj.time;
-            var d = new Date(0);
-            d.setUTCSeconds(utc_seconds);
-            s += "<br/> Time: " + d.toISOString();
-            return s;
-        }
-
-        var get_cron_string_from_config_obj = function(config_obj){
-            var s = "cron: ";
-            s += " " + config_obj.cron_minutes;
-            s += " " + config_obj.cron_hours;
-            s += " " + config_obj.cron_days_of_month;
-            s += " " + config_obj.cron_months;
-            s += " " + config_obj.cron_days_of_week;
-            s += " currently needing " + config_obj.num_required;
-            s += " over " + config_obj.lookback_string;
-            return s;
-        }
-
-        var render_dashes = function(check_history){
-            $("#dashes").html("");
-            var regex = new RegExp($("#event-name-regex").val());
-            for(var key in check_history){
-                if(!regex.test(key)){
-                    continue;
+    var get_config = function(){
+        $.ajax({
+            url: "/affirmative/get_event_config",
+            data: {},
+            async: false,
+            success: function(data){ 
+                var config = JSON.parse(data);
+                for(var i = 0; i < config.length; i++){
+                    var this_config = config[i];
+                    affirmative_ui.config_by_key[this_config.key] = this_config;
                 }
-                var event_config = affirmative_ui.config_by_name[key];
-                var event_name_elem = $("<span class='event-name'></span>")
-                    .text(key);
-                var dash_container = $("<div class='dash-container'></div>");
-                dash_container.append(event_name_elem);
-                var dash_details = $("<div></div>");
-                var config_details = $("<div class='config-details'></div>")
-                    .text(get_cron_string_from_config_obj(event_config));
-                config_details.appendTo(dash_details);
-                var this_history = check_history[key].slice(-10);
-                for(var i = 0; i < this_history.length; i++){
-                    var this_check = this_history[i];
-                    if(this_check.met_required){
-                        $("<img class='check-pass' src='/affirmative/static/green_checkmark.svg'/>")
-                            .appendTo(dash_details)
-                            .tooltip({content: make_check_mouseover_text(this_check), items: "img"});
-                    }
-                    else{
-                        $("<img class='check-fail' src='/affirmative/static/red_x.png' />")
-                            .appendTo(dash_details)
-                            .tooltip({content: make_check_mouseover_text(this_check), items: "img"});
-                    }
-                }
-                dash_details.appendTo(dash_container);
-                dash_container.appendTo("#dashes");
-                
-                
-            }
-        }
-
-        $("#submit-regex-button").click(function(){
-            get_dash_data();
+            },
+            error: function(){ alert("something went wrong."); }
         });
+    }
+    var get_dash_data = function(){
+        $.ajax({
+            url: "/affirmative/get_check_history",
+            data: {},
+            success: function(data){ render_dashes(JSON.parse(data)); },
+            error: function(){ alert("something went wrong."); }
+        });
+    }
 
-        get_config();
-        setTimeout(get_dash_data, 500);
+    var make_check_mouseover_text = function(check_obj){
+        var s = "";
+        s += "Num: " + check_obj.num_observed;
+        var utc_seconds = check_obj.time;
+        var d = new Date(0);
+        d.setUTCSeconds(utc_seconds);
+        s += "<br/> Time: " + d.toISOString();
+        return s;
+    }
 
+    var get_cron_string_from_config_obj = function(config_obj){
+        var s = "cron: ";
+        s += " " + config_obj.cron_minutes;
+        s += " " + config_obj.cron_hours;
+        s += " " + config_obj.cron_days_of_month;
+        s += " " + config_obj.cron_months;
+        s += " " + config_obj.cron_days_of_week;
+        s += " currently needing " + config_obj.num_required;
+        s += " over " + config_obj.lookback_string;
+        return s;
+    }
+
+    var render_dashes = function(check_history){
+        $("#dashes").html("");
+        var regex = new RegExp($("#event-name-regex").val());
+        for(var key in check_history){
+            console.log("key is", key);
+            var event_config = affirmative_ui.config_by_key[key];
+            var event_name = event_config.name;
+            if(!regex.test(event_name)){
+                continue;
+            }
+            var event_name_elem = $("<span class='event-name'></span>")
+                .text(event_name + " (" + key + ")");
+            var dash_container = $("<div class='dash-container'></div>");
+            dash_container.append(event_name_elem);
+            var dash_details = $("<div></div>");
+            var config_details = $("<div class='config-details'></div>")
+                .text(get_cron_string_from_config_obj(event_config));
+            config_details.appendTo(dash_details);
+            var this_history = check_history[key].slice(-10);
+            for(var i = 0; i < this_history.length; i++){
+                var this_check = this_history[i];
+                var mouseover_text = make_check_mouseover_text(this_check);
+                if(this_check.num_observed >= this_check.num_required){
+                    $("<img class='check-pass' src='/affirmative/static/green_checkmark.svg'/>")
+                        .appendTo(dash_details)
+                        .tooltip({content: mouseover_text, items: "img"});
+                }
+                else{
+                    $("<img class='check-fail' src='/affirmative/static/red_x.png' />")
+                        .appendTo(dash_details)
+                        .tooltip({content: mouseover_text, items: "img"});
+                }
+            }
+            dash_details.appendTo(dash_container);
+            dash_container.appendTo("#dashes");
+            
+            
+        }
+    }
+
+    var display_raw_events = function(event_name){
+        var events_container = $("#raw-events");
+        events_container.html("");
+        $.get("/affirmative/events/" + event_name, {}, function(resp){
+            var resp = JSON.parse(resp);
+            for(var i in resp){
+                var text = JSON.stringify(resp[i]);
+                events_container.append("<div>" + text + "</div>");
+            }
+        });
+    }
+
+    $("#submit-regex-button").click(function(){
+        get_dash_data();
     });
+
+    $("#display-raw-events-button").click(function(){
+        var event_name = $("#events-by-event-name-input").val();
+        display_raw_events(event_name);
+    });
+
+    get_config();
+    get_dash_data();
+    setInterval(get_dash_data, 10000);
+
+});
 
 </script>
 
 <h2>View Events</h2>
 <p>Mouseover displayed icons to see details of the outcome for the event.</p>
-Event name regex <input id='event-name-regex'/> <button id='submit-regex-button'>Search</button>
+Show dashboards by event name regex <input id='event-name-regex'/> <button id='submit-regex-button'>Search</button>
+View most recent events by name: <input id='events-by-event-name-input' /> <button id='display-raw-events-button'>Fetch</button>
+<div id='raw-events'></div>
 <br/>
 <br/>
 <div id='dashes'></div>

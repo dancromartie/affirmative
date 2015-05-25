@@ -28,14 +28,11 @@ logging.info("Im alive!")
 
 
 # Anything that's not dumped after this long should get purged
-RECORD_LIFETIME_DAYS = 2
-
-event_config = []
-check_history = {}
+RECORD_LIFETIME_DAYS = 30
 
 
 def get_config_db_path():
-    return "../data/" + webapp.config["INSTANCE"] + ".db"
+    return "../data/" + webapp.config["INSTANCE"] + ".config.db"
 
 
 def get_stats_db_path():
@@ -86,11 +83,17 @@ def build_tables(config_db_path, stats_db_path):
     else:
 
         execute_schema_build_stuff(stats_db_path, """
-            CREATE TABLE events (time integer, env text, name text, data text)
+            CREATE TABLE events (time integer, name text, data text)
         """)
 
         execute_schema_build_stuff(stats_db_path, """
-            CREATE INDEX idx_event_time_name ON events (time, env, name)
+            CREATE INDEX idx_event_time_name ON events (time, name)
+        """)
+
+        execute_schema_build_stuff(stats_db_path, """
+            CREATE TABLE check_history 
+            (time integer, key text, num_required integer,
+                num_observed integer)
         """)
 
         execute_schema_build_stuff(config_db_path, "DROP TABLE IF EXISTS event_config")
@@ -117,12 +120,12 @@ def store_event():
     logging.info(events)
     to_write = []
     query = """
-        INSERT INTO events (env, time, name, data)
-        VALUES (?,?,?,?)
+        INSERT INTO events (time, name, data)
+        VALUES (?,?,?)
     """
 
     for e in events:
-        to_write.append((e["env"], time.time(), e["name"], e["data"]))
+        to_write.append((time.time(), e["name"], e["data"]))
 
     execute_insert_disk(get_stats_db_path(), query, to_write, many=True)
 
@@ -133,38 +136,32 @@ def store_event():
     return "cool"
 
 
-@webapp.route("/affirmative/get_status_of_all", methods=["GET"])
-def get_status_of_all_web():
-    return json.dumps(get_status_of_all())
+@webapp.route("/affirmative/check_all", methods=["GET"])
+def check_all_web():
+    return json.dumps(check_all())
 
 
-def get_status_of_all():
+def check_all():
     statuses = {}
-    for conf in event_config:
-        statuses[conf["name"]] = do_check(conf["name"])
+    for conf in get_event_config():
+        do_check(conf["key"])
     return statuses
 
 
 # TODO make this a POST, but it's easier to debug as a GET right now...
 @webapp.route("/affirmative/do_minutely_cron_dont_touch_this", methods=["GET"])
 def do_minutely_cron():
-    global check_history
-    statuses = get_status_of_all()
-    for name in statuses:
-        if name not in check_history:
-            check_history[name] = []
-        if "met_required" in statuses[name]:
-            check_history[name].append(statuses[name])
+    check_all()
     return "yay"
 
 
 @webapp.route("/affirmative/get_check_history", methods=["GET"])
 def get_check_history_web():
-    return json.dumps(check_history)
+    return json.dumps(get_check_history())
 
-@webapp.route("/affirmative/do_check/<name>", methods=["GET"])
-def do_check_web(name):
-    return json.dumps(do_check(name))
+@webapp.route("/affirmative/do_check/<key>", methods=["GET"])
+def do_check_web(key):
+    return json.dumps(do_check(key))
 
 
 def passes_cron_criteria(num, cron_expression):
@@ -202,18 +199,19 @@ def is_time_to_check(datetime_obj, config_record):
     return True
 
 
-def do_check(name):
-    query = "SELECT * FROM event_config WHERE name = ?"
+def do_check(key):
+    query = "SELECT * FROM event_config WHERE key = ?"
     first_result = None
-    query_results = query_to_dicts(get_config_db_path(), query, (name,))
+    query_results = query_to_dicts(get_config_db_path(), query, (key,))
     if len(query_results) == 0:
-        return {"error": "no event configuration for that name"}
+        return {"error": "no event configuration for that key"}
     else:
         assert len(query_results) == 1
         first_result = query_results[0]
         should_check_now = is_time_to_check(datetime.datetime.now(), first_result)
         if not should_check_now:
             return {"message": "not time for check yet"}
+        name = first_result["name"]
         lookback_string = first_result["lookback_string"]
         num_required = first_result["num_required"]
         now_epoch = time.time()
@@ -231,7 +229,19 @@ def do_check(name):
         else:
             count = results[0]["count"]
         met_required = count >= num_required
-        return {"count": count, "met_required": met_required, "time": now_epoch}
+        result = {
+            "count": count,
+            "num_required": num_required,
+            "met_required": met_required,
+            "time": now_epoch
+        }
+        insert_query = """
+            INSERT INTO check_history (time, key, num_required, num_observed)
+            VALUES (?, ?, ?, ?)
+        """
+        data = (now_epoch, key, num_required, count)
+        execute_insert_disk(get_stats_db_path(), insert_query, data)
+        return result
 
 
 def epoch_delta_from_lookback_string(lookback_string):
@@ -264,43 +274,30 @@ def delete_old_rows():
     )
 
 
-@webapp.route("/affirmative/get_events/<env>/<name>", methods=["GET"])
-def get_events(env, name):
-    few_days_ago_str = get_few_days_ago_string()
+@webapp.route("/affirmative/events/<name>", methods=["GET"])
+def get_events(name):
     query = """
         SELECT * FROM events
-        WHERE
-        env = ? AND name = ? AND time > ?
+        WHERE name = ?
         ORDER BY time DESC
         LIMIT 10000
     """
-    results = query_to_dicts(get_stats_db_path(), query, (env, name, few_days_ago_string))
+    results = query_to_dicts(get_stats_db_path(), query, (name,))
     return json.dumps(results)
 
 
-@webapp.route("/affirmative/get_all_stats", methods=["GET"])
-def get_all_stats_web():
-    return json.dumps(get_all_stats())
-
-
-def get_all_stats():
-    stats_by_name = {}
-    stats_to_return = []
-    event_config_copy = copy.deepcopy(event_config)
-    query = "SELECT count(1) as count, name FROM events WHERE env='prod' GROUP BY name"
+def get_check_history():
+    query = """
+        SELECT * FROM check_history ORDER BY time
+    """
     results = query_to_dicts(get_stats_db_path(), query, ())
-    for r in results:
-        stats_by_name[r["name"]] = dict(r)
-    for conf in event_config_copy:
-        if conf["name"] in stats_by_name: 
-            to_append = stats_by_name[conf["name"]]
-        else:
-            to_append = {"name": conf["name"], "count": 0}
+    by_name = {}
+    for result in results:
+        if result["key"] not in by_name:
+            by_name[result["key"]] = []
+        by_name[result["key"]].append(result)
+    return by_name
 
-        to_append.update(conf)
-        stats_to_return.append(to_append)
-    return stats_to_return
-    
 
 @webapp.route("/affirmative/manage_events", methods=["GET"])
 def render_manage_events():
@@ -309,7 +306,6 @@ def render_manage_events():
 
 @webapp.route("/affirmative/view_events", methods=["GET"])
 def render_view_events():
-    update_event_config()
     return render_template("view_events.html")
 
 
@@ -318,9 +314,13 @@ def render_about():
     return render_template("about.html")
 
 
+@webapp.route("/affirmative/trigger", methods=["GET"])
+def render_trigger():
+    return render_template("trigger.html")
+
+
 @webapp.route("/affirmative/get_event_config", methods=["GET"])
 def get_event_config_web():
-    update_event_config()
     return json.dumps(get_event_config())
 
 
@@ -328,9 +328,7 @@ def get_event_config():
     event_config = []
     query = "SELECT * FROM event_config"
     results = query_to_dicts(get_config_db_path(), query, ())
-    for r in results:
-        event_config.append(r)
-    return event_config
+    return results
 
 
 def is_valid_cron_number(s):
@@ -428,9 +426,28 @@ def invalid_num_required_message(s):
     return ""
 
 
-@webapp.route("/affirmative/register_or_update_event", methods=["POST"])
-def register_or_update_event():
-    event_name = request.form["name"]
+@webapp.route("/affirmative/register_event", methods=["POST"])
+def register_event():
+    event_name = request.form["event_name"]
+    key_components = [
+        letter for letter in string.ascii_letters] + [str(d) for d in range(1, 10)
+    ]
+    key = "".join([random.choice(key_components) for i in range(6)])
+    insert_query = """
+        INSERT INTO event_config (name, key, num_required, lookback_string, cron_minutes, 
+            cron_hours, cron_days_of_month, cron_months, cron_days_of_week
+        )
+        VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    data = (event_name, key, 0, "1000d", 1, 1, 1, 1, 1)
+    execute_insert_disk(get_config_db_path(), insert_query, data)
+    return "yay"
+
+
+@webapp.route("/affirmative/update_event_config", methods=["POST"])
+def update_event_config():
+    key = request.form["key"]
 
     lookback_string = request.form["lookback_string"]
     if invalid_lookback_string_message(lookback_string):
@@ -455,60 +472,27 @@ def register_or_update_event():
         if invalid_cron_string_message(val):
             return invalid_cron_string_message(val)
 
-    already_exists_query = """SELECT name FROM event_config WHERE name = ? """
-    name_exists_results = query_to_dicts(get_config_db_path(), already_exists_query, (event_name,))
-    if len(name_exists_results) == 0:
-        insert_query = """
-            INSERT INTO event_config (
-                name, key, num_required, lookback_string, cron_minutes,
-                cron_hours, cron_days_of_month, cron_months, cron_days_of_week
-            )
-            VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """
-        key_components = [
-            letter for letter in string.ascii_letters] + [str(d) for d in range(1, 10)
-        ]
-        key = "".join([random.choice(key_components) for i in range(6)])
-        data = (
-            event_name, key, num_required, lookback_string, cron_minutes,
-            cron_hours, cron_days_of_month, cron_months, cron_days_of_week
-        )
-        execute_insert_disk(get_config_db_path(), insert_query, data)
-    else:
-        update_query = """
-            UPDATE event_config SET num_required = ?, lookback_string = ?, cron_minutes = ?,
-            cron_hours = ?, cron_days_of_month = ?, cron_months = ?, cron_days_of_week = ?
-            WHERE name = ?
-        """
-        data = (
-            num_required, lookback_string, cron_minutes,
-            cron_hours, cron_days_of_month, cron_months, cron_days_of_week, event_name
-        )
-        execute_insert_disk(get_config_db_path(), update_query, data)
+    update_query = """
+        UPDATE event_config SET num_required = ?, lookback_string = ?, cron_minutes = ?,
+        cron_hours = ?, cron_days_of_month = ?, cron_months = ?, cron_days_of_week = ?
+        WHERE key = ?
+    """
+    data = (
+        num_required, lookback_string, cron_minutes,
+        cron_hours, cron_days_of_month, cron_months, cron_days_of_week, key
+    )
+    execute_insert_disk(get_config_db_path(), update_query, data)
 
-    update_event_config()
     return "yay"
 
 
 @webapp.route("/affirmative/unregister_event", methods=["POST"])
 def unregister_event():
-    name = request.form["name_to_delete"]
-    execute_insert_disk(get_config_db_path(), "DELETE FROM event_config WHERE name = ?", (name,))
-    update_event_config()
+    key = request.form["key_to_delete"]
+    execute_insert_disk(get_config_db_path(), "DELETE FROM event_config WHERE key = ?", (key,))
     return "yay"
 
 
-def update_event_config():
-    global event_config
-    event_config = []
-    query = "SELECT * FROM event_config"
-    results = query_to_dicts(get_config_db_path(), query, ())
-    for r in results:
-        print r
-        event_config.append(r)
-
-        
 def build_app(debug, instance):
     # When you tell gunicorn check:webapp, you're really pointing it to a 'wsgi callable'
     # You can also give it a function that returns a callable, such as this one
@@ -519,7 +503,6 @@ def build_app(debug, instance):
     webapp.config["INSTANCE"] = instance
 
     build_tables(config_db_path=get_config_db_path(), stats_db_path=get_stats_db_path())
-    update_event_config()
     logging.info("got here")
 
     return webapp

@@ -18,10 +18,10 @@
         float: left;
         margin: 10px;
     }
-    input{
+    .cron-input{
         width: 70px;
     }
-    #new-event-name{
+    #update-event-name{
         width: 200px;
     }
     #config-table{
@@ -69,7 +69,7 @@
             // This is just some light validation
             // The python will do the real tricky stuff
             var message = "";
-            var name = $("#new-event-name").val();
+            var name = $("#update-event-name").val();
             var name_regex = new RegExp("^[a-z_]+$");
             if(!name_regex.test(name)){
                 message = "Name can only consist of lowercase letters and underscores.";
@@ -106,7 +106,26 @@
             return message;
         }
 
-        $("#new-event-button").click(function(){
+        $("#register-event-button").click(function(){
+            var event_name = $("#register-event-name").val();
+            var data = {event_name: event_name};
+            $.ajax({
+                url: "/affirmative/register_event",
+                type: "POST",
+                data: data,
+                success: function(data){ 
+                    if(data != "yay"){ 
+                        render_new_or_update_error(data);
+                    }
+                    else{
+                        location.reload();
+                    }
+                },
+                error: function(data){ render_new_or_update_error(data); }
+            });
+        });
+
+        $("#update-event-button").click(function(){
             $(".validation-warning").remove();
             var validation_message = validate_fields();
             if(validation_message != ""){
@@ -115,18 +134,18 @@
                     .insertAfter("#config-table").hide().show(300); 
                 return false;
             }
-            var name = $("#new-event-name").val();
-            var num_required = $("#new-event-num-required").val();
-            var lookback_string = $("#new-event-lookback-string").val();
+            var key = $("#update-event-key").val();
+            var num_required = $("#update-event-num-required").val();
+            var lookback_string = $("#update-event-lookback-string").val();
 
-            var cron_minutes = $("#new-event-cron-minutes").val();
-            var cron_hours = $("#new-event-cron-hours").val();
-            var cron_months = $("#new-event-cron-months").val();
-            var cron_days_of_month = $("#new-event-cron-days-of-month").val();
-            var cron_days_of_week = $("#new-event-cron-days-of-week").val();
+            var cron_minutes = $("#update-event-cron-minutes").val();
+            var cron_hours = $("#update-event-cron-hours").val();
+            var cron_months = $("#update-event-cron-months").val();
+            var cron_days_of_month = $("#update-event-cron-days-of-month").val();
+            var cron_days_of_week = $("#update-event-cron-days-of-week").val();
 
             var data = {
-                name: name,
+                key: key,
                 num_required: num_required,
                 lookback_string: lookback_string,
                 cron_minutes: cron_minutes,
@@ -137,7 +156,7 @@
             }
 
             $.ajax({
-                url: "/affirmative/register_or_update_event",
+                url: "/affirmative/update_event_config",
                 type: "POST",
                 data: data,
                 success: function(data){ 
@@ -163,11 +182,11 @@
         }
 
         $("#delete-event-button").click(function(){
-            var name = $("#event-name-to-delete").val();
+            var key = $("#event-key-to-delete").val();
             $.ajax({
                 url: "/affirmative/unregister_event",
                 type: "POST",
-                data: {name_to_delete: name},
+                data: {key_to_delete: key},
                 success: function(){ location.reload(); },
                 error: function(){ alert("something went wrong."); }
             });
@@ -197,20 +216,23 @@
     <tbody>
     </tbody>
 </table>
-<h3>Register or update an event</h3>
-Name: <input id='new-event-name' /><br/><br/>
+<h3>Register an event checker</h3>
+Name: <input id='register-event-name' /><br/><br/>
+<button id='register-event-button'>submit</button><br/><br/>
 
-Cron Minutes: <input class='cron-input' id='new-event-cron-minutes' /> (0-59)  <br/>
-Cron Hours: <input class='cron-input' id='new-event-cron-hours' /> (0-59) <br/>
-Cron Days of Month: <input class='cron-input' id='new-event-cron-days-of-month' /> (1-31) <br/>
-Cron Months: <input class='cron-input' id='new-event-cron-months' /> (0-11) <br/>
-Cron Days of Week: <input class='cron-input' id='new-event-cron-days-of-week' /> (0-6, 0 = Sunday) <br/><br/>
+<h3>Update an event checker</h3>
+Key: <input id='update-event-key' /> <br/>
+Cron Minutes: <input class='cron-input' id='update-event-cron-minutes' /> (0-59)  <br/>
+Cron Hours: <input class='cron-input' id='update-event-cron-hours' /> (0-59) <br/>
+Cron Days of Month: <input class='cron-input' id='update-event-cron-days-of-month' /> (1-31) <br/>
+Cron Months: <input class='cron-input' id='update-event-cron-months' /> (0-11) <br/>
+Cron Days of Week: <input class='cron-input' id='update-event-cron-days-of-week' /> (0-6, 0 = Sunday) <br/><br/>
 
-Num Required: <input id='new-event-num-required' /> (This is how many events you need to see from the check.)<br/>
-Lookback String: <input id='new-event-lookback-string' /> (This says how far back in time we will look to count events.)<br/><br/>
+Num Required: <input id='update-event-num-required' /> (This is how many events you need to see from the check.)<br/>
+Lookback String: <input id='update-event-lookback-string' /> (This says how far back in time we will look to count events.)<br/><br/>
 
-<button id='new-event-button'>Submit</button><br/><br/>
-<h3>Unregister an event</h3>
-Delete event with name: <input id='event-name-to-delete' name='event-name-to-delete'/><br/>
+<button id='update-event-button'>Submit</button><br/><br/>
+<h3>Unregister an event checker</h3>
+Delete checker with key: <input id='event-key-to-delete' name='event-key-to-delete'/><br/>
 <button id='delete-event-button'>Submit</button>
 {% endblock %}

@@ -1,15 +1,15 @@
-from math import sin, cos, radians, acos
-import time
+import copy
 import datetime
 from datetime import date, timedelta
 import logging
+from math import sin, cos, radians, acos
+import os.path
+import random
 import re
 import sqlite3
-import sys
-import random
 import string
-import copy
-import os.path
+import sys
+import time
 
 from flask import Flask, request, url_for, render_template, json
 
@@ -253,21 +253,15 @@ def epoch_delta_from_lookback_string(lookback_string):
     return seconds
 
 
-def get_few_days_ago_string():
-    today = datetime.datetime.now()
-    delta = datetime.timedelta(days=RECORD_LIFETIME_DAYS)
-    few_days_ago = today - delta
-    few_days_ago_str = few_days_ago.strftime("%Y-%m-%d")
-    return few_days_ago_str
-
-
 def delete_old_rows():
     logging.info("DELETING OLD ROWS")
-    few_days_ago_str = get_few_days_ago_string()
+    now_epoch = time.time()
+    few_days_in_seconds = RECORD_LIFETIME_DAYS * 24 * 60 * 60
+    few_days_ago = now_epoch - few_days_in_seconds
     execute_insert_disk(
         get_stats_db_path(),
         "DELETE FROM events WHERE time < ?", 
-        (few_days_ago_str,)
+        (few_days_ago,)
     )
 
 

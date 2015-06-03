@@ -36,6 +36,9 @@
 
     $(document).ready(function(){
 
+        var d = new Date();
+        $("<span></span>").text("The time of this page load was: " + d.toUTCString())
+            .appendTo("#update-event-explanation");
         var get_event_config = function(){
             $.ajax({
                 url: "/affirmative/get_event_config",
@@ -225,12 +228,18 @@ Name: <input id='register-event-name' /><br/><br/>
 <button id='register-event-button'>submit</button><br/><br/>
 
 <h3>Update an event checker</h3>
+<p id='update-event-explanation'>
+    Some of the conventions differ from the cron format you may be used to (i.e.
+    some don't start at 0 to align more closely with Python).  Times refer to UTC
+    time.
+</p>
+
 Key: <input id='update-event-key' /> <br/>
 Cron Minutes: <input class='cron-input' id='update-event-cron-minutes' /> (0-59)  <br/>
 Cron Hours: <input class='cron-input' id='update-event-cron-hours' /> (0-23) <br/>
 Cron Days of Month: <input class='cron-input' id='update-event-cron-days-of-month' /> (1-31) <br/>
-Cron Months: <input class='cron-input' id='update-event-cron-months' /> (0-11) <br/>
-Cron Days of Week: <input class='cron-input' id='update-event-cron-days-of-week' /> (0-6, 0 = Sunday) <br/><br/>
+Cron Months: <input class='cron-input' id='update-event-cron-months' /> (1-12) <br/>
+Cron Days of Week: <input class='cron-input' id='update-event-cron-days-of-week' /> (0-6, 0 = Monday) <br/><br/>
 
 Min allowed: <input id='update-event-min-allowed' /><br/>
 Max allowed: <input id='update-event-max-allowed' /><br/>

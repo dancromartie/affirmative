@@ -39,9 +39,11 @@ $(document).ready(function(){
         var s = "";
         s += "Num: " + check_obj.num_observed;
         var utc_seconds = check_obj.time;
-        var d = new Date(0);
-        d.setUTCSeconds(utc_seconds);
-        s += "<br/> Time: " + d.toISOString();
+        var d = new Date(utc_seconds * 1000);
+        var local_string = d.toString();
+        var utc_string = d.toUTCString();
+        s += "<br/> UTC: " + utc_string;
+        s += "<br/> local: " + local_string;
         return s;
     }
 
@@ -120,8 +122,14 @@ $(document).ready(function(){
         $.get("/affirmative/events/" + event_name, {}, function(resp){
             var resp = JSON.parse(resp);
             for(var i in resp){
-                var text = JSON.stringify(resp[i]);
-                events_container.append("<div>" + text + "</div>");
+                var this_event = resp[i];
+                var d = new Date(this_event.time * 1000);
+                var epoch = this_event.time;
+                var local_time = d.toString();
+                var utc_time = d.toUTCString();
+                var date_string = "epoch: " + epoch + ", UTC: " +
+                    utc_time + ", local: " + local_time;
+                events_container.append("<div>" +  date_string + "</div>");
             }
         });
     }

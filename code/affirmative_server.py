@@ -114,11 +114,26 @@ def build_tables(config_db_path, stats_db_path):
 
 
 @webapp.route("/affirmative/store", methods=["POST"])
-def store_event():
+def store_events_web():
     logging.info("request data is %s", request.data)
     payload = json.loads(request.data)
     events = payload["events"]
     logging.info(events)
+    store_events(events)
+
+
+@webapp.route("/affirmative/simplest", methods=["POST"])
+def simplest_web():
+    event = {
+        "name": request.form["event_name"],
+        "data": "ok"
+    }
+    events = [event]
+    store_events(events)
+    return "cool"
+
+
+def store_events(events):
     to_write = []
     query = """
         INSERT INTO events (time, name, data)
@@ -134,7 +149,6 @@ def store_event():
     rando = random.randint(1, 300)
     if rando == 17:
         delete_old_rows()
-    return "cool"
 
 
 @webapp.route("/affirmative/check_all", methods=["GET"])
@@ -150,7 +164,7 @@ def check_all():
 
 
 # TODO make this a POST, but it's easier to debug as a GET right now...
-@webapp.route("/affirmative/do_minutely_cron_dont_touch_this", methods=["GET"])
+@webapp.route("/affirmative/do_minutely_cron", methods=["GET"])
 def do_minutely_cron():
     check_all()
     return "yay"

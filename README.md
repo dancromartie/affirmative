@@ -96,17 +96,23 @@ All of the event data is available via some API urls, so people can do whatever
 they want with it, but I've made these basic cron checks out of the box.  If
 you _only_ want to store raw event data, this is probably a bad tool for that.
 
-## Libraries / Scripts for various languages ##
+## Examples for various languages ##
 
-There is a python module that can be used like:
+There are two endpoints right now.  "simplest" and "store".  "store" is general purpose, and 
+allows for multiple events, setting a specific timestamp (in the case of network slowness, etc), 
+and json payloads.  Read the source to figure out how to use "store".  It's a pretty simple JSON 
+input.
+
+The endpoint "simplest" takes a POST request with a form parameter of "event_name".  That's all.  
+I used to have a client module that would package requests up and set a timeout and cert verification 
+preferences and all, but that was dumb.  Just do something like:
 
 ```python
-import affirmative_client
+import requests
 
-ac = affirmative_client.Client("http://localhost:5123", "prod")
-for i in range(1, 100):
-    print "sending!"
-    ac.affirm_one("that_critical_app_health_check", "good")
+url = "http://localhost:5123/affirmative/simplest"
+data = {"event_name": "sometest"}
+requests.post(url, data=data, verify=False)
 ```
 
 The second argument is ignored for now, but it's meant to be an arbitrary
@@ -114,7 +120,8 @@ string in case there's use for a little JSON payload or a little discrimination
 on the client's part when they consume some API endpoints.
 
 
-At the time of this writing, you can build your own R client like so:
+Here's an example in R, showing the more complicated format for "store".  You should be able to 
+replicate the "simplest" procedure shown for python in no time, though.
 
 ```R
 AffirmOne <- function(url, eventName, data){
@@ -134,15 +141,9 @@ AffirmOne(affirmativeEndpoint, "rtest", "still ok")
 AffirmOne(affirmativeEndpoint, "rtest", "yep still ok")
 ```
 
-
-I hope to add a javascript version too, so that you can record "sign-off" events
-from a gui as well, or simply track usage of certain features (from an "is this
-broken and theyre just not telling me" kind of perspective - there are probably
-other better tools for tracking intricate usage patterns on a UI)
-
-For now, you can look at the "trigger page" to see how to implement your own JS client.  I just 
-need to make it portable.
-
+For now, you can look at the "trigger page" to see how to implement your own JS client.  That 
+code should make it obvious how to trigger events from JS, if you don't already know how to POST 
+things from JS.  I think it's simplest to just make your own wrappers here.
 
 ## keys vs event names##
 
@@ -174,6 +175,13 @@ this_process_looks_good key to affirmative.  It will alert you as soon as the sc
 configured your event checked right. If your script failed before it got to send confirmation, 
 you'll be investigating the next morning either way!
 
+## Actually sending negative events
+
+Now, there's all this talk about sending positive acknowledgement, but you
+don't have to.  One approach is to set a key that allows 0 events every minute,
+for example.  If you send an event like "problems_with_my_app", then within a
+minute, you should get an alert on that.  In fact, doing this along with the
+positive events may be a very strong combination.
 
 
 
@@ -189,20 +197,20 @@ you'll be investigating the next morning either way!
 Run ./start_dev.sh.  The start script is pretty simple. Look at it to see the arguments, 
 but defaults are provided.
 
-## Running the sample client
+## Logging some test events
 Run python run_client_test.py.  This requires that you have the event names referenced in that file 
 created already.
 
+## Logs
+Are stored in the logs folder by default.  There is an access log, and error
+log for things that are outside of your app's control (syntax errors, gunicorn
+couldn't start etc), and everything else is in the plan .log file.
+
 ## Keeping the checks running
 While this tries to wrap a cron like thing, the actual checks are run minutely by a cron 
-job.  Setting that job up on your local machine might not be what you want, so I like to do this 
-in another terminal tab:
+job.  Setting that job up on your local machine might not be what you want, so you can use the 
+scripts/do_checks.py script.  It will run the checks on a 60 second (or user specified) interval.
 
-```
-for run in {1..1000}; do curl "http://localhost:5123/affirmative/do_minutely_cron_dont_touch_this" && sleep 60; done;
-```
-
-This will run the minutely checks for 1000 minutes.  You could set up the cron in your own crontab 
-or use Vagrant or something to run this all so you don't muck up your machine.
-
-I also like to just put that url in my browser bar and trigger the event with a page refresh if I don't want to wait a minute between checks.
+I also like to just put that url in my browser bar and trigger the event with a
+page refresh if I don't want to wait a minute between checks.  It shouldn't really be a GET request, 
+but I liked having it be triggered so simply.

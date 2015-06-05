@@ -18,20 +18,24 @@ $(document).ready(function(){
             async: false,
             success: function(data){ 
                 var config = JSON.parse(data);
-                for(var i = 0; i < config.length; i++){
-                    var this_config = config[i];
-                    affirmative_ui.config_by_key[this_config.key] = this_config;
-                }
+                affirmative_ui.config_by_key = config;
             },
-            error: function(){ alert("something went wrong."); }
+            error: function(){
+                $("<div class='alert alert-danger'>Something went wrong getting config.</div>")
+                    .prependTo("#dashes");
+            }
         });
     }
     var get_dash_data = function(){
         $.ajax({
             url: "/affirmative/get_check_history",
             data: {},
+            timeout: 10000,
             success: function(data){ render_dashes(JSON.parse(data)); },
-            error: function(){ alert("something went wrong."); }
+            error: function(){
+                $("<div class='alert alert-danger'>Something went wrong getting dash.</div>")
+                    .prependTo("#dashes");
+            }
         });
     }
 

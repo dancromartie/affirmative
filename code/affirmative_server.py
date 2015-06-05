@@ -32,11 +32,13 @@ RECORD_LIFETIME_DAYS = 30
 
 
 def get_config_db_path():
-    return "../data/" + webapp.config["INSTANCE"] + ".config.db"
+    data_dir = os.path.abspath("../data/") + "/"
+    return data_dir + webapp.config["INSTANCE"] + ".config.db"
 
 
 def get_stats_db_path():
-    return "../data/" + webapp.config["INSTANCE"] + ".stats.db"
+    data_dir = os.path.abspath("../data/") + "/"
+    return data_dir + webapp.config["INSTANCE"] + ".stats.db"
 
 
 def execute_insert_disk(db_path, query, params, many=False):
@@ -59,10 +61,13 @@ def execute_schema_build_stuff(db_path, query):
     conn.close()
 
 
-def query_to_dicts(db_path, query, params):
+def query_to_dicts(db_path, query, params, additional_path=None):
     try:
         dict_results = []
         conn = sqlite3.connect(db_path)
+        if additional_path is not None:
+            logging.info(additional_path)
+            conn.execute("ATTACH DATABASE '" + additional_path + "' AS otherdb")
         cursor = conn.cursor()
         cursor.row_factory = sqlite3.Row
         query_results = cursor.execute(query, params)
@@ -158,8 +163,8 @@ def check_all_web():
 
 def check_all():
     statuses = {}
-    for conf in get_event_config():
-        do_check(conf["key"])
+    for key in get_event_config():
+        do_check(key)
     return statuses
 
 
@@ -292,10 +297,16 @@ def get_events(name):
 
 
 def get_check_history():
+    # You don't want to return checks that are unregistered from the config now.
+    # TODO, do we want to track historical config records?
+    # If not, should we delete checks and event data for unregistered events?
     query = """
-        SELECT * FROM check_history ORDER BY time
+        SELECT ch.* FROM check_history ch
+        JOIN otherdb.event_config ec
+        ON ec.key = ch.key
+        ORDER BY time
     """
-    results = query_to_dicts(get_stats_db_path(), query, ())
+    results = query_to_dicts(get_stats_db_path(), query, (), get_config_db_path())
     by_name = {}
     for result in results:
         if result["key"] not in by_name:
@@ -332,8 +343,11 @@ def get_event_config_web():
 def get_event_config():
     event_config = []
     query = "SELECT * FROM event_config"
+    config_by_name = {}
     results = query_to_dicts(get_config_db_path(), query, ())
-    return results
+    for result in results:
+        config_by_name[result["key"]] = result
+    return config_by_name
 
 
 def is_valid_cron_number(s):

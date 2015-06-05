@@ -43,15 +43,20 @@
             $.ajax({
                 url: "/affirmative/get_event_config",
                 data: {},
-                success: function(data){ render_event_config(JSON.parse(data)); },
+                success: function(data){ 
+                    affirmative_ui.event_config = JSON.parse(data);
+                    render_event_config(JSON.parse(data)); 
+                },
                 error: function(){ alert("something went wrong."); }
             });
         }
 
         var render_event_config = function(event_config){
+            // Have to turn the dict into an array
+            var as_array = _.map(_.keys(event_config), function(x){return event_config[x]});
             $('#config-table').dataTable({
                 "destroy": true,
-                "data": event_config,
+                "data": as_array,
                 "columns": [
                     { "data": "name"},
                     { "data": "key"},
@@ -108,6 +113,24 @@
                     
             });
             return message;
+        }
+        
+        $("#update-event-key").focusout(function(){
+            var key = $(this).val();
+            var key_config = affirmative_ui.event_config[key];
+            fill_in_config_to_update(key_config);
+        });
+
+        var fill_in_config_to_update = function(config){
+            $("#update-event-min-allowed").val(config.min_allowed);
+            $("#update-event-max-allowed").val(config.max_allowed);
+            $("#update-event-lookback-string").val(config.lookback_string);
+
+            $("#update-event-cron-minutes").val(config.cron_minutes);
+            $("#update-event-cron-hours").val(config.cron_hours);
+            $("#update-event-cron-months").val(config.cron_months);
+            $("#update-event-cron-days-of-month").val(config.cron_days_of_month);
+            $("#update-event-cron-days-of-week").val(config.cron_days_of_week);
         }
 
         $("#register-event-button").click(function(){

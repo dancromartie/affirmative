@@ -125,6 +125,7 @@ def store_events_web():
     events = payload["events"]
     logging.info(events)
     store_events(events)
+    return "cool"
 
 
 @webapp.route("/affirmative/simplest", methods=["POST"])

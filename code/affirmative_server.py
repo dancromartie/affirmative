@@ -301,13 +301,17 @@ def get_check_history():
     # You don't want to return checks that are unregistered from the config now.
     # TODO, do we want to track historical config records?
     # If not, should we delete checks and event data for unregistered events?
+    now_epoch = time.time()
+    few_days_ago = now_epoch - 86400 * 5
     query = """
         SELECT ch.* FROM check_history ch
         JOIN otherdb.event_config ec
         ON ec.key = ch.key
+        WHERE 
+        ch.time > ?
         ORDER BY time
     """
-    results = query_to_dicts(get_stats_db_path(), query, (), get_config_db_path())
+    results = query_to_dicts(get_stats_db_path(), query, (few_days_ago,), get_config_db_path())
     by_name = {}
     for result in results:
         if result["key"] not in by_name:

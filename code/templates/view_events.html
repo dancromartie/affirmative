@@ -4,6 +4,11 @@
 <title>View Events</title>
 
 <style type="text/css">
+    #dashes-spacer{
+        /* Important because the tooltip can't be seen on last line without this. */
+        margin-bottom: 100px;
+        clear: both;
+    }
     .dash-container{
         border: 1px solid black;
         border-radius: 5px;
@@ -196,4 +201,5 @@ $(document).ready(function(){
 <p>Mouseover displayed icons to see details of the outcome for the event.</p>
 <div id='raw-events'></div>
 <div id='dashes'></div>
+<div id='dashes-spacer'></div>
 {% endblock %}

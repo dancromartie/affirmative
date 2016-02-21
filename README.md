@@ -37,44 +37,17 @@ customers because a designer broke all the CSS on some page that's far removed
 from your app.  No matter what, there are some things that you just want to
 _know_ are happening.
 
-That's where these "positive affirmations" come in.  It's not logging an error,
-because there was no "error".  You just want to know that sh!t is getting done,
+That's where these "confirmations"/"heartbeats" come in.  It's not logging an error,
+because there was no "error".  You just want to know that stuff is getting done,
 whether it be you writing your one piece of docs for the day, your team pair
-programming for an hour sometime this week, or your daily backup routine
+programming for an hour sometime this week, an app being alive, or your daily backup routine
 finishing and passing all integrity tests.
-
-## A note about confirmation / the direction of things
-
-As you configure your checks, consider the fundamental difference between the following:
- - procces_a_is_fine was received
- - process_a_is_out_of_wack was not received
-
-The second message is not very powerful.
-
-Consider the statement: "Absence of evidence does not imply evidence of
-absence."  If we treat an email warning about an exception as evidence of a
-problem, then it's fair to say that the absence of that email does not mean
-that there is evidence that there is no problem.  If you know that the thing
-sending your confirmation is well hooked into the process and that it is
-reporting back as often as it should be, then when you send confirmation that
-something good DID happen, you have evidence of absence of a problem.  It's very important that 
-people can trust the test that says "things are good" though, or none of this works.
-
-Just think about when somebody goes off into a blizzard or into a tunnel in a
-zombie movie.  They say "Jimmy, call for help if you don't hear from me in 5
-minutes".  They don't say "Jimmy, I'll call you if I die".  Why is that?
-
-Now, all of this depends on Jimmy not dying or falling asleep back at the cabin.  If he does, 
-then no help gets sent.  Similarly, if our checker dies, then we're in trouble, and we'll get no 
-alerts.  I have to think about this more, but I think it's the kind of thing I want a siren and 
-light on my desk for - e.g. I should always have a green light blinking at my desk when it 
-successfully completes checks.  If the light goes dark, we have problems.
 
 ## Example Use Cases ##
 
 You can configure a series of "checks" or "events" that have to happen periodically.
 
-A cron like format is used to say when each check is performed.
+A cron-like format is used to say when each check is performed.
 
 For instance, you might have a check named "etl_3d3de3et_ran_with_no_problems".
 You want to check this at 1am, 7am, and 4pm on weekdays, and each time you
@@ -184,7 +157,6 @@ minute, you should get an alert on that.  In fact, doing this along with the
 positive events may be a very strong combination.
 
 
-
 ## Screenshots ##
 ### Configuration Page ###
 ![Alt text](/screenshots/config_events.png?raw=true "Optional title")
@@ -211,6 +183,7 @@ While this tries to wrap a cron like thing, the actual checks are run minutely b
 job.  Setting that job up on your local machine might not be what you want, so you can use the 
 scripts/do_checks.py script.  It will run the checks on a 60 second (or user specified) interval.
 
-I also like to just put that url in my browser bar and trigger the event with a
-page refresh if I don't want to wait a minute between checks.  It shouldn't really be a GET request, 
-but I liked having it be triggered so simply.
+For testing, I also like to just put the special check url in my browser bar
+and trigger the event with a page refresh if I don't want to wait a minute
+between checks.  It shouldn't really be a GET request, but I liked having it be
+triggered so simply.

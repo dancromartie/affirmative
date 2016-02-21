@@ -3,6 +3,41 @@
 <!doctype html>
 <title>View Events</title>
 
+<style type="text/css">
+    #dashes-spacer{
+        /* Important because the tooltip can't be seen on last line without this. */
+        margin-bottom: 100px;
+        clear: both;
+    }
+    .dash-container{
+        border: 1px solid black;
+        border-radius: 5px;
+        float: left;
+        margin: 5px;
+        padding: 5px;
+    }
+    .event-name{
+        color: rgb(16, 72, 145);
+        font-size: 16px;
+        margin-right: 5px;
+    }
+    .success-mark, .failure-mark{
+        border-radius: 7px;
+        border-style: solid;
+        border-width: 7px;
+        display: inline-block;
+        height: 7px;
+        margin: 1px;
+        width: 7px;
+    }
+    .success-mark{
+        border-color: rgb(151, 208, 151);;
+    }
+    .failure-mark{
+        border-color: rgb(207, 85, 85);
+    }
+</style>
+
 <script type="text/javascript">
 
 // Global container
@@ -58,7 +93,7 @@ $(document).ready(function(){
         s += " " + config_obj.cron_days_of_month;
         s += " " + config_obj.cron_months;
         s += " " + config_obj.cron_days_of_week;
-        s += " currently needing between " + config_obj.min_allowed + " and " + 
+        s += " needs btwn " + config_obj.min_allowed + " & " + 
             config_obj.max_allowed;
         s += " over " + config_obj.lookback_string;
         return s;
@@ -68,7 +103,7 @@ $(document).ready(function(){
         var now_epoch = Math.floor((new Date).getTime()/1000);
         var last_epoch = history[history.length - 1].time;
         var minutes_ago = (now_epoch - last_epoch) / 60;
-        return "Last check was " + minutes_ago.toFixed(2) + " minutes ago."
+        return "Last check " + minutes_ago.toFixed(2) + " mins ago."
     }
 
     var render_dashes = function(check_history){
@@ -85,7 +120,7 @@ $(document).ready(function(){
             var this_history = check_history[key].slice(-10);
 
             var event_name_elem = $("<span class='event-name'></span>")
-                .text(event_name + " (" + key + ")");
+                .text(event_name);
             var dash_container = $("<div class='dash-container'></div>");
             dash_container.append(event_name_elem);
             var dash_details = $("<div></div>");
@@ -103,14 +138,16 @@ $(document).ready(function(){
                 var in_bounds = this_check.num_observed >= this_check.min_allowed && 
                     this_check.num_observed <= this_check.max_allowed;
                 if(in_bounds){
-                    $("<img class='check-pass' src='/affirmative/static/green_checkmark.svg'/>")
+                    //$("<img class='check-pass' src='/affirmative/static/green_checkmark.svg'/>")
+                    $("<div class='success-mark'></div>")
                         .appendTo(dash_details)
-                        .tooltip({content: mouseover_text, items: "img"});
+                        .tooltip({content: mouseover_text, items: "div"});
                 }
                 else{
-                    $("<img class='check-fail' src='/affirmative/static/red_x.png' />")
+                    //$("<img class='check-fail' src='/affirmative/static/red_x.png' />")
+                    $("<div class='failure-mark'></div>")
                         .appendTo(dash_details)
-                        .tooltip({content: mouseover_text, items: "img"});
+                        .tooltip({content: mouseover_text, items: "div"});
                 }
             }
             dash_details.appendTo(dash_container);
@@ -156,11 +193,13 @@ $(document).ready(function(){
 </script>
 
 <h2>View Events</h2>
+<div>Show dashboards by event name regex:</div>
+<div><input id='event-name-regex'/> <button id='submit-regex-button'>Search</button></div>
+<div>View most recent events by name:</div>
+<div><input id='events-by-event-name-input' /> <button id='display-raw-events-button'>Fetch</button></div>
+
 <p>Mouseover displayed icons to see details of the outcome for the event.</p>
-Show dashboards by event name regex <input id='event-name-regex'/> <button id='submit-regex-button'>Search</button>
-View most recent events by name: <input id='events-by-event-name-input' /> <button id='display-raw-events-button'>Fetch</button>
 <div id='raw-events'></div>
-<br/>
-<br/>
 <div id='dashes'></div>
+<div id='dashes-spacer'></div>
 {% endblock %}

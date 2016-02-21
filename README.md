@@ -187,3 +187,10 @@ For testing, I also like to just put the special check url in my browser bar
 and trigger the event with a page refresh if I don't want to wait a minute
 between checks.  It shouldn't really be a GET request, but I liked having it be
 triggered so simply.
+
+## Exporting data
+Something like:
+
+```
+./export_stats.sh ../data/default.stats.db /tmp/affirmative.stats.dump
+```
